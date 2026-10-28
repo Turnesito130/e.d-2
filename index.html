@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ev</title>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@200;300;400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+</head>
+<body>
+<canvas id="cv" tabindex="0" role="button" aria-label="ev. Toca la esfera para despertarla"></canvas>
+<div id="st">toca la esfera para despertar a ev</div>
+<div id="you"></div>
+<div id="sub" aria-live="polite"></div>
+
+<div id="gal" aria-label="Imágenes"></div>
+<div id="dock">
+  <button id="bImg" aria-label="Quitar imágenes" title="Quitar imágenes">&#10005;</button>
+  <button id="bCfg" aria-label="Ajustes" title="Ajustes">&#9881;</button>
+  <button id="bTxt" aria-label="Escribir a ev" title="Escribir a ev">&#9998;</button>
+</div>
+<div id="chat">
+  <div id="clog" aria-live="polite"></div>
+  <form id="cform"><input id="cin" type="text" autocomplete="off" placeholder="Escribe a ev..." aria-label="Mensaje para ev"><button type="submit">Enviar</button></form>
+</div>
+
+<div id="set">
+  <h2>Ajustes de ev</h2>
+  <label for="k1">Clave de Gemini</label>
+  <input id="k1" type="password" autocomplete="off" placeholder="AIza...">
+  <label for="mod">Modelo</label>
+  <input id="mod" type="text" placeholder="gemini-3.5-flash">
+  <label for="brain">Cerebro</label>
+  <select id="brain">
+    <option value="gemini">Gemini (rápido, ve tu pantalla)</option>
+    <option value="local">Local en este Chromebook (usa Gemini solo si hay que ver la pantalla)</option>
+  </select>
+  <label for="lmod">Modelo local (opcional)</label>
+  <input id="lmod" type="text" placeholder="Qwen2.5-0.5B-Instruct-q4f16_1-MLC">
+  <label for="k2">Clave de ElevenLabs (opcional)</label>
+  <input id="k2" type="password" autocomplete="off">
+  <label for="vid">ID de voz de ElevenLabs (opcional)</label>
+  <input id="vid" type="text" autocomplete="off">
+  <p>Las claves se guardan solo en este navegador, nunca en GitHub. Para volver aquí, di «ev, ajustes».</p>
+  <button id="save">Guardar</button>
+</div>
+
+<script src="core.js?v=1"></script>
+<script src="sphere.js?v=1"></script>
+<script src="ui.js?v=1"></script>
+<script src="screen.js?v=1"></script>
+<script src="voice.js?v=1"></script>
+<script src="brain.js?v=1"></script>
+<script src="main.js?v=1"></script>
+</body>
+</html>
