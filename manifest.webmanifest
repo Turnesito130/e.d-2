@@ -1,0 +1,12 @@
+{
+  "name": "ev",
+  "short_name": "ev",
+  "description": "Asistente de IA con voz",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#050302",
+  "theme_color": "#050302",
+  "lang": "es",
+  "icons": [{ "src": "icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
