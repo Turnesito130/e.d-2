@@ -1,6 +1,5 @@
 /* ev · Acciones por voz: páginas, temporizador, calculadora, notas, estudio y diagnóstico */
-const SITES = { youtube: "https://www.youtube.com", gmail: "https://mail.google.com", classroom: "https://classroom.google.com", drive: "https://drive.google.com", calendario: "https://calendar.google.com", github: "https://github.com", google: "https://www.google.com" };
-const NUM = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, quince: 15, veinte: 20, treinta: 30 };
+const SITES = { maps: "https://www.google.com/maps", traductor: "https://translate.google.com", youtube: "https://www.youtube.com", gmail: "https://mail.google.com", classroom: "https://classroom.google.com", drive: "https://drive.google.com", calendario: "https://calendar.google.com", github: "https://github.com", spotify: "https://open.spotify.com", whatsapp: "https://web.whatsapp.com", wikipedia: "https://es.wikipedia.org", google: "https://www.google.com" };const NUM = { un: 1, una: 1, uno: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10, quince: 15, veinte: 20, treinta: 30 };
 const NUMRE = /\b(un|una|uno|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|quince|veinte|treinta)\b/g;
 function showLink(url, label) {
   const old = $("toast"); if (old) old.remove();
@@ -49,9 +48,7 @@ async function commandHook(text, byText) {
     setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak("Ya pasaron " + lbl + "."); }, ms);
     return reply(text, "Vale, te aviso en " + lbl + ". Deja esta pestaña abierta.", byText);
   }
-  if ((m = n.match(/(?:cuanto es|calcula)\s+(.+)/))) { const r = calc(m[1]); if (r !== null) return reply(text, "Son " + r + ".", byText); }
-  if ((m = n.match(/^(?:busca en google|googlea)\s+(.+)/))) { openUrl("https://www.google.com/search?q=" + encodeURIComponent(m[1]), "la búsqueda"); return reply(text, "Buscando " + m[1] + ".", byText); }
-  if ((m = n.match(/^(?:abre|abrir|ve a|ir a)\s+(.+)/))) {
+    if ((m = n.match(/^(?:abre|abrir|ve a|ir a)\s+(.+)/))) {
     const k = Object.keys(SITES).find(s => m[1].includes(s));
     if (k) { openUrl(SITES[k], k); return reply(text, "Abriendo " + k + ".", byText); }
   }
