@@ -52,7 +52,8 @@ async function* geminiChunks(key, text, withShot) {
 
 /* ---------- Preguntar ---------- */
 async function ask(text, byText) {
-  if (busy) return; viaText = !!byText;
+    if (busy) return; viaText = !!byText;
+  if (await commandHook(text, byText)) return;
   const key = store.get("ed_k1"), mode = store.get("ed_brain") || "gemini";
   const needShot = !!stream && wantsScreen.test(text), useLocal = mode === "local" && !needShot;
   if (!useLocal && !key) { openSet(); showSub(mode === "local" ? "Para ver tu pantalla necesito la clave de Gemini." : "Necesito tu clave de Gemini."); return; }
