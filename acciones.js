@@ -48,8 +48,8 @@ async function commandHook(text, byText) {
     setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak("Ya pasaron " + lbl + "."); }, ms);
     return reply(text, "Vale, te aviso en " + lbl + ". Deja esta pestaña abierta.", byText);
   }
-    if ((m = n.match(/^(?:abre|abrir|ve a|ir a)\s+(.+)/))) {
-    const k = Object.keys(SITES).find(s => m[1].includes(s));
+     if (/\b(abre|abres|abreme|abrir|abras|ve a|ir a|entra en|llevame a|ponme)\b/.test(n)) {
+    const k = Object.keys(SITES).find(s => n.includes(s));
     if (k) { openUrl(SITES[k], k); return reply(text, "Abriendo " + k + ".", byText); }
   }
   return false;
