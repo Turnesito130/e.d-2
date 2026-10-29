@@ -20,7 +20,7 @@ async function loadLocal() {
   try { return await llmLoading; } finally { llmLoading = null; }
 }
 async function* localChunks(text) {
-  const msgs = [{ role: "system", content: SYS },
+  const msgs = [{ role: "system", content: sysFull() },
     ...history.map(h => ({ role: h.role === "model" ? "assistant" : "user", content: h.parts[0].text })),
     { role: "user", content: text }];
   const st = await llm.chat.completions.create({ messages: msgs, stream: true, max_tokens: 400, temperature: .7 });
