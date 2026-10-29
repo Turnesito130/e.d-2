@@ -33,7 +33,7 @@ async function* geminiChunks(key, text, withShot) {
   if (model.includes("2.5")) gen.thinkingConfig = { thinkingBudget: 0 };
   const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {
     method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({ system_instruction: { parts: [{ text: SYS }] }, contents: [...history, { role: "user", parts }], generationConfig: gen })
+    body: JSON.stringify({ system_instruction: { parts: [{ text: sysFull() }] }, contents: [...history, { role: "user", parts }], generationConfig: gen })
   });
   if (!r.ok) throw new Error("Gemini " + r.status);
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "";
