@@ -35,7 +35,7 @@ async function runTool(name, a) {
 async function* geminiChunks(key, text, withShot) {
   const model = store.get("ed_mod") || "gemini-3.5-flash", parts = [{ text }];
   if (withShot) parts.push({ inline_data: { mime_type: "image/jpeg", data: await frame() } });
-  const gen = { maxOutputTokens: 600 };
+  const gen = { maxOutputTokens: 400 };
   if (model.includes("2.5")) gen.thinkingConfig = { thinkingBudget: 0 };
   const contents = [...history, { role: "user", parts }];
   for (let round = 0; round < 4; round++) {
