@@ -73,7 +73,7 @@ async function ask(text, byText) {
     for await (const c of src) {
       full += c; vis = full.split("[[")[0].replace(/\[$/, ""); pend += vis.slice(sent); sent = vis.length; showSub(vis, true);
       if (bub) { bub.textContent = vis; $("clog").scrollTop = 1e9; }
-      let m; while ((m = pend.match(/^[\s\S]*?[.!?\n](\s|$)/))) { speak(m[0]); pend = pend.slice(m[0].length); }
+           let m; while ((m = pend.match(/^(?:[\s\S]*?[.!?\n]|[\s\S]{45,}?[,;:])(\s|$)/))) { speak(m[0]); pend = pend.slice(m[0].length); }
     }
     if (pend.trim()) speak(pend);
     if (!full) { if (bub) bub.textContent = "No recibí respuesta."; showSub("No recibí respuesta."); setState("idle"); }
