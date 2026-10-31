@@ -17,7 +17,7 @@ export function makeTrainingPairs(tokenIds, contextSize) {
 }
 
 export async function train(model, tokenIds, {
-  epochs = 10, learningRate = 0.03, onProgress = () => {},
+  epochs = 10, learningRate = 0.001, onProgress = () => {},
   yieldEvery = 250, shouldStop = () => false, optimizer = "adam", shuffle = true
 } = {}) {
   if (!Number.isInteger(epochs) || epochs < 1 || epochs > 10000) throw new RangeError("epochs debe estar entre 1 y 10000");
