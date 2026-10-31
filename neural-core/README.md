@@ -23,13 +23,28 @@ No es todavía un Transformer, no tiene comprensión general, no razona como una
 
 Sirve los archivos desde un servidor web estático que admita módulos ES y abre `neural-core/test.html`. También puede probarse en un entorno estático compatible. No se recomienda abrirlo mediante `file://`, porque algunos navegadores bloquean módulos ES locales.
 
+## Organización del repositorio
+
+- El código JavaScript de la aplicación vive en `js/`.
+- El prototipo neuronal vive en `js/neural-core/`.
+- Esta carpeta conserva la página de pruebas y esta documentación.
+- `index.html` carga los scripts desde `js/`; el service worker permanece en la raíz.
+
+## Mejoras de estabilidad 0.1
+
+- Recorte global de gradientes para limitar actualizaciones excesivas.
+- Validación de tasas de aprendizaje, límites de generación y tokens de prefijo.
+- Rechazo de vocabularios duplicados al importar.
+- Pruebas adicionales para estas condiciones.
+
 ## Próximos pasos
 
-1. Añadir barajado de ejemplos y Adam.
-2. Añadir evaluación separada de entrenamiento.
-3. Añadir guardado en IndexedDB.
-4. Medir memoria y velocidad en Chromebook.
-5. Diseñar un Transformer pequeño después de validar esta base.
+1. Ejecutar las pruebas en un navegador con servidor estático.
+2. Añadir barajado de ejemplos y un optimizador Adam.
+3. Añadir evaluación separada de entrenamiento.
+4. Añadir guardado en IndexedDB.
+5. Medir memoria y velocidad en Chromebook.
+6. Diseñar un Transformer pequeño después de validar esta base.
 
 ## Seguridad y privacidad
 
