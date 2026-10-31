@@ -1,5 +1,6 @@
 // E.D.-2 Neural Core — pruebas automáticas básicas
 import { CharTokenizer } from "./tokenizer.js";
+import { SubwordTokenizer } from "./subword-tokenizer.js";
 import { AdamOptimizer } from "./optimizer.js";
 import { evaluate } from "./evaluation.js";
 import { scaledDotProductAttention, TinyAttentionBlock } from "./attention.js";
@@ -156,6 +157,30 @@ export async function runCoreTests(onLog = () => {}) {
     await memory.put("prueba", "memoria local");
     assert(await memory.get("prueba") === "memoria local", "nota recuperada");
     await memory.delete("prueba");
+  });
+
+
+  await test("BPE: aprende subpalabras y reconstruye el corpus", () => {
+    const corpus = "hola hola mundo mundo hola mundo";
+    const tokenizer = new SubwordTokenizer().fit(corpus, { vocabSize: 32, minFrequency: 2 });
+    const ids = tokenizer.encode(corpus);
+    assert(tokenizer.size > new Set([...corpus]).size, "debe aprender piezas combinadas");
+    assert(tokenizer.decode(ids) === corpus, "codificación y decodificación exactas");
+    assert(ids.length < [...corpus].length, "debe reducir tokens en un corpus repetitivo");
+  });
+
+  await test("BPE: conserva vocabulario y reglas al serializar", () => {
+    const tokenizer = new SubwordTokenizer().fit("hola hola mundo", { vocabSize: 24 });
+    const restored = SubwordTokenizer.fromJSON(tokenizer.toJSON());
+    assert(restored.decode(restored.encode("hola mundo")) === "hola mundo", "BPE restaurado");
+  });
+
+  await test("API: permite crear un cerebro con tokenizador BPE", () => {
+    const brain = createBrain({ text: "hola hola mundo mundo", contextSize: 2, hiddenSize: 8, tokenizerType: "bpe" });
+    assert(brain.tokenizer instanceof SubwordTokenizer, "debe usar BPE");
+    const restored = importBrain(exportBrain(brain));
+    assert(restored.tokenizer instanceof SubwordTokenizer, "debe restaurar BPE");
+    assert(restored.tokenizer.decode(restored.tokenizer.encode("hola mundo")) === "hola mundo", "texto conservado");
   });
 
   onLog("RESULTADO: " + results.length + " superadas; " + failures.length + " fallidas.");
