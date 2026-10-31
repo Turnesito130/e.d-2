@@ -3,8 +3,6 @@
  * Expone forwardFeatures() para extracción de estados finales y forward() para logits.
  * El entrenamiento actual de etapa 1 actualiza solo lmHead; el cuerpo está congelado.
  */
-const rand = (n, scale = 0.02) => Array.from({length:n}, () =>
-  Array.from({length:n}, () => (Math.random() * 2 - 1) * scale));
 const zeros = (r,c) => Array.from({length:r},()=>Array(c).fill(0));
 const dot = (a,b) => a.map(row => b[0].map((_,j)=>row.reduce((s,v,k)=>s+v*b[k][j],0)));
 const add = (a,b) => a.map((r,i)=>r.map((v,j)=>v+b[i][j]));
@@ -21,8 +19,11 @@ function linear(x,w) { return w[0].map((_,j)=>x.reduce((s,v,i)=>s+v*w[i][j],0));
 export class TransformerDecoder {
   constructor({vocabSize=512, dModel=64, heads=4, layers=2, maxSeqLen=128, seed=17}={}) {
     if (!Number.isInteger(vocabSize)||vocabSize<2) throw new Error("vocabSize debe ser >= 2");
-    if (dModel%heads) throw new Error("dModel debe ser divisible por heads");
-    if (layers<1||maxSeqLen<2) throw new Error("Configuración Transformer no válida");
+    if (!Number.isInteger(dModel) || dModel < 2) throw new Error("dModel debe ser un entero >= 2");
+    if (!Number.isInteger(heads) || heads < 1 || dModel % heads) throw new Error("dModel debe ser divisible por heads");
+    if (!Number.isInteger(layers) || layers < 1 || layers > 24) throw new Error("layers debe estar entre 1 y 24");
+    if (!Number.isInteger(maxSeqLen) || maxSeqLen < 2 || maxSeqLen > 4096) throw new Error("maxSeqLen debe estar entre 2 y 4096");
+    if (!Number.isInteger(seed)) throw new Error("seed debe ser un entero");
     this.config={vocabSize,dModel,heads,layers,maxSeqLen,ffSize:dModel*4};
     let state=seed>>>0;
     const random=()=>{state=(1664525*state+1013904223)>>>0;return state/4294967296*2-1;};
@@ -73,8 +74,34 @@ export class TransformerDecoder {
   toJSON(){return {format:"ed2-transformer",version:1,config:this.config,embedding:this.embedding,position:this.position,blocks:this.blocks,lmHead:this.lmHead};}
   static fromJSON(data){
     if(data?.format!=="ed2-transformer"||data.version!==1) throw new Error("Bundle Transformer no válido");
-    const m=new TransformerDecoder(data.config);
-    for(const key of ["embedding","position","blocks","lmHead"]) m[key]=data[key];
+    const c=data.config;
+    if(!c || !Number.isInteger(c.vocabSize) || !Number.isInteger(c.dModel) ||
+       !Number.isInteger(c.heads) || !Number.isInteger(c.layers) ||
+       !Number.isInteger(c.maxSeqLen) || c.ffSize !== c.dModel*4) {
+      throw new TypeError("Configuración del bundle no válida");
+    }
+    const m=new TransformerDecoder(c);
+    const matrix=(value,rows,cols,name)=>{
+      if(!Array.isArray(value)||value.length!==rows||
+         value.some(row=>!Array.isArray(row)||row.length!==cols||row.some(x=>typeof x!=="number"||!Number.isFinite(x)))) {
+        throw new TypeError("Matriz inválida: "+name);
+      }
+    };
+    matrix(data.embedding,c.vocabSize,c.dModel,"embedding");
+    matrix(data.position,c.maxSeqLen,c.dModel,"position");
+    matrix(data.lmHead,c.dModel,c.vocabSize,"lmHead");
+    if(!Array.isArray(data.blocks)||data.blocks.length!==c.layers) throw new TypeError("Bloques Transformer no válidos");
+    for(let i=0;i<data.blocks.length;i++){
+      const b=data.blocks[i];
+      if(!b||typeof b!=="object") throw new TypeError("Bloque Transformer no válido");
+      for(const key of ["wq","wk","wv","wo"]) matrix(b[key],c.dModel,c.dModel,"blocks["+i+"]."+key);
+      matrix(b.w1,c.dModel,c.ffSize,"blocks["+i+"].w1");
+      matrix(b.w2,c.ffSize,c.dModel,"blocks["+i+"].w2");
+    }
+    m.embedding=data.embedding;
+    m.position=data.position;
+    m.blocks=data.blocks;
+    m.lmHead=data.lmHead;
     return m;
   }
 }
