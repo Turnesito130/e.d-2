@@ -71,3 +71,5 @@ export function importBrain(json) {
 }
 
 export { createLearningProfile, loadLearningProfile, saveLearningProfile, deleteLearningProfile, formatStudySteps, buildStudyPromptGuidance } from "./learning-profile.js";
+export { coordinateReasoning } from "./reasoning-coordinator.js";
+export { createStudySession, formatStudyAnswer } from "./study-tutor.js";
