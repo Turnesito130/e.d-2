@@ -26,6 +26,8 @@ async function testTraining() {
   assert.equal(JSON.stringify({embedding:model.embedding,blocks:model.blocks,position:model.position}),bodyBefore);
   assert.ok(after<before,"la pérdida de entrenamiento de la cabeza debe bajar");
   assert.equal(createTransformerCheckpoint(model).format,"ed2-transformer-checkpoint");
+  assert.throws(()=>evaluateTransformer(model,[1,2,99]),/Corpus tokenizado/);
+  assert.throws(()=>trainTransformerHead(model,[1,2,99]),/Corpus tokenizado/);
 }
 testCrossEntropyGradient();testHeadGradient();await testTraining();
 console.log("Transformer head training: 3 grupos de pruebas superados.");
