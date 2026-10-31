@@ -25,8 +25,12 @@
       button.disabled = true;
       log.textContent = "Iniciando pruebas…";
       try {
-        const results = await runCoreTests(write);
-        write("COMPLETADO: " + results.length + " pruebas superadas.");
+        const report = await runCoreTests(write);
+        if (report.failed.length === 0) {
+          write("COMPLETADO: las " + report.passed.length + " pruebas han superado la comprobación.");
+        } else {
+          write("REVISIÓN NECESARIA: " + report.failed.length + " pruebas han fallado. Copia los mensajes marcados con ✗.");
+        }
       } catch (error) {
         write("ERROR: " + error.message);
         console.error(error);
