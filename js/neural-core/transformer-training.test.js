@@ -15,6 +15,25 @@ function testHeadGradient() {
   assert.equal(g.dW.length,2);assert.equal(g.dW[0].length,3);
   assert.ok(Number.isFinite(g.loss));
 }
+
+function testOutputHeadFiniteDifference() {
+  const features=[0.3,-0.2,0.7], weights=[[0.1,-0.2,0.4],[0.3,0.2,-0.1],[-0.4,0.5,0.2]];
+  const target=1, eps=1e-5;
+  const logits=weights[0].map((_,j)=>features.reduce((sum,x,i)=>sum+x*weights[i][j],0));
+  const analytic=outputHeadGradients(features,logits,target);
+  const lossAt=(matrix)=>{
+    const scores=matrix[0].map((_,j)=>features.reduce((sum,x,i)=>sum+x*matrix[i][j],0));
+    return crossEntropy(scores,target);
+  };
+  for(let i=0;i<weights.length;i++) for(let j=0;j<weights[i].length;j++) {
+    const plus=weights.map(row=>[...row]), minus=weights.map(row=>[...row]);
+    plus[i][j]+=eps; minus[i][j]-=eps;
+    const numeric=(lossAt(plus)-lossAt(minus))/(2*eps);
+    assert.ok(Math.abs(numeric-analytic.dW[i][j])<1e-6,
+      `gradiente de lmHead incorrecto en [${i},${j}]: ${numeric} vs ${analytic.dW[i][j]}`);
+  }
+}
+
 async function testTraining() {
   const model=new TransformerDecoder({vocabSize:8,dModel:8,heads:2,layers:1,maxSeqLen:8,seed:4});
   const ids=[1,2,3,1,2,3,1,2,3,1,2,3];
@@ -29,5 +48,5 @@ async function testTraining() {
   assert.throws(()=>evaluateTransformer(model,[1,2,99]),/Corpus tokenizado/);
   await assert.rejects(()=>trainTransformerHead(model,[1,2,99]),/Corpus tokenizado/);
 }
-testCrossEntropyGradient();testHeadGradient();await testTraining();
+testCrossEntropyGradient();testHeadGradient();testOutputHeadFiniteDifference();await testTraining();
 console.log("Transformer head training: 3 grupos de pruebas superados.");
