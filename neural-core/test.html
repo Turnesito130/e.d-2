@@ -3,43 +3,30 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>E.D.-2 Neural Core 0.1 — pruebas</title>
+  <title>E.D.-2 Neural Core — pruebas</title>
   <style>
     body{font:16px system-ui;max-width:850px;margin:32px auto;padding:0 16px;background:#101722;color:#eef}
-    button{padding:10px 16px;margin:8px 0;cursor:pointer} pre{white-space:pre-wrap;background:#1b2938;padding:14px;border-radius:8px}
+    button{padding:10px 16px;margin:8px 0;cursor:pointer}
+    button:disabled{opacity:.6;cursor:wait}
+    pre{white-space:pre-wrap;background:#1b2938;padding:14px;border-radius:8px;min-height:180px}
   </style>
 </head>
 <body>
-  <h1>E.D.-2 Neural Core 0.1</h1>
-  <p>Prueba experimental de una red neuronal de caracteres entrenada desde cero en este navegador.</p>
-  <button id="run">Ejecutar pruebas y entrenamiento</button>
-  <pre id="log">Listo. Pulsa el botón para comenzar.</pre>
+  <h1>E.D.-2 Neural Core</h1>
+  <p>Pruebas locales del prototipo neuronal. No utiliza APIs ni descarga modelos.</p>
+  <button id="run">Ejecutar pruebas</button>
+  <pre id="log" aria-live="polite">Listo. Pulsa el botón para comenzar.</pre>
   <script type="module">
-    import { createBrain, trainBrain, generateText, exportBrain, importBrain } from "./index.js";
+    import { runCoreTests } from "./tests.js";
     const log = document.querySelector("#log");
     const button = document.querySelector("#run");
-    const write = message => { log.textContent += "\\n" + message; };
+    const write = message => { log.textContent += "\n" + message; };
     button.addEventListener("click", async () => {
       button.disabled = true;
-      log.textContent = "Iniciando…";
+      log.textContent = "Iniciando pruebas…";
       try {
-        const corpus = ("hola ed dos aprende poco a poco. ed dos es un proyecto experimental. " +
-          "una red neuronal aprende patrones a partir de ejemplos. ").repeat(8);
-        const brain = createBrain({ text: corpus, contextSize: 6, hiddenSize: 32 });
-        write("Vocabulario: " + brain.tokenizer.size + " caracteres.");
-        write("Pesos inicializados aleatoriamente: " +
-          (brain.model.toJSON().W1.flat().some(v => v !== 0) ? "correcto" : "ERROR"));
-        const result = await trainBrain(brain, corpus, {
-          epochs: 15, learningRate: 0.04,
-          onProgress: p => { if (p.epoch === 1 || p.epoch % 5 === 0) write("Época " + p.epoch + "/" + p.epochs + " — pérdida: " + p.loss.toFixed(4)); }
-        });
-        write("Entrenamiento terminado: " + result.steps + " pasos.");
-        const generated = generateText(brain, "hola ", { maxTokens: 100, temperature: 0.7 });
-        write("Texto generado:\\n" + generated);
-        const restored = importBrain(exportBrain(brain));
-        write("Exportación/importación: " +
-          (restored.tokenizer.size === brain.tokenizer.size ? "correcta" : "ERROR"));
-        write("PRUEBA COMPLETADA. Esto demuestra aprendizaje de patrones de caracteres, no comprensión humana.");
+        const results = await runCoreTests(write);
+        write("COMPLETADO: " + results.length + " pruebas superadas.");
       } catch (error) {
         write("ERROR: " + error.message);
         console.error(error);
