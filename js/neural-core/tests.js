@@ -64,6 +64,15 @@ export async function runCoreTests(onLog = () => {}) {
     assert(after < before, "la pérdida debe bajar (" + before.toFixed(3) + " → " + after.toFixed(3) + ")");
   });
 
+  await test("inferencia: ruta rápida coincide con la ruta completa", () => {
+    const brain = createBrain({ text: "hola mundo hola", contextSize: 4, hiddenSize: 8 });
+    const context = [0, 1, 2, 3];
+    const regular = brain.model._forward(context).probs;
+    const fast = brain.model._forwardFast(context).probs;
+    assert(fast.length === regular.length, "mismo tamaño de salida");
+    assert(fast.every((value, i) => Math.abs(value - regular[i]) < 1e-12), "probabilidades equivalentes");
+  });
+
   await test("generación: produce la cantidad solicitada", () => {
     const brain = createBrain({ text: "hola mundo hola mundo", contextSize: 4, hiddenSize: 8 });
     const out = generateText(brain, "hola", { maxTokens: 12, temperature: 0.8 });
