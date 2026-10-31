@@ -10,7 +10,7 @@ async function loadLocal() {
     const w = await import("https://esm.run/@mlc-ai/web-llm");
     const list = w.prebuiltAppConfig.model_list, want = store.get("ed_lmod");
     let id = (list.find(m => m.model_id === want) || {}).model_id;
-    if (!id) for (const re of [/Qwen2\\.5-1\\.5B-Instruct-q4f16_1/, /Llama-3\\.2-1B-Instruct-q4f16_1/, /Qwen2\\.5-0\\.5B-Instruct-q4f16_1/]) {
+    if (!id) for (const re of [/Qwen2\.5-1\.5B-Instruct-q4f16_1/, /Llama-3\.2-1B-Instruct-q4f16_1/, /Qwen2\.5-0\.5B-Instruct-q4f16_1/]) {
       const f = list.find(m => re.test(m.model_id)); if (f) { id = f.model_id; break; }
     }
     if (!id) id = (list.find(m => m.low_resource_required) || list[0]).model_id;
@@ -40,7 +40,7 @@ async function* geminiChunks(key, text, withShot) {
   while (true) {
     const { done, value } = await rd.read(); if (done) break;
     buf += dec.decode(value, { stream: true });
-    const lines = buf.split("\\n"); buf = lines.pop();
+    const lines = buf.split("\n"); buf = lines.pop();
     for (const l of lines) {
       if (!l.startsWith("data:")) continue;
       let j; try { j = JSON.parse(l.slice(5)); } catch (e) { continue; }
@@ -71,15 +71,15 @@ async function ask(text, byText) {
       catch (e) { if (!key) throw e; showSub("El cerebro local falló (" + e.message + "). Uso Gemini.", true); src = geminiChunks(key, text, false); }
     } else src = geminiChunks(key, text, needShot);
     for await (const c of src) {
-      full += c; vis = full.split("[[")[0].replace(/\\[$/, ""); pend += vis.slice(sent); sent = vis.length; showSub(vis, true);
+      full += c; vis = full.split("[[")[0].replace(/\[$/, ""); pend += vis.slice(sent); sent = vis.length; showSub(vis, true);
       if (bub) { bub.textContent = vis; $("clog").scrollTop = $("clog").scrollHeight; }
-      let m; while ((m = pend.match(/^(?:[\\s\\S]*?[.!?\\n]|[\\s\\S]{45,}?[,;:])(\\s|$)/))) { speak(m[0]); pend = pend.slice(m[0].length); }
+      let m; while ((m = pend.match(/^(?:[\s\S]*?[.!?\n]|[\s\S]{45,}?[,;:])(\s|$)/))) { speak(m[0]); pend = pend.slice(m[0].length); }
     }
     if (pend.trim()) speak(pend);
     if (!full) { if (bub) bub.textContent = "No recibí respuesta."; showSub("No recibí respuesta."); setState("idle"); }
     history.push({ role: "user", parts: [{ text }] }, { role: "model", parts: [{ text: vis }] });
     history = history.slice(-12); showSub(vis);
-    const mk = full.match(/\\[\\[\\s*im[aá]genes?\\s*:\\s*([^\\]]+)\\]\\]/i); if (mk) showImages(mk[1]);
+    const mk = full.match(/\[\[\s*im[aá]genes?\s*:\s*([^\]]+)\]\]/i); if (mk) showImages(mk[1]);
   } catch (e) { if (bub) bub.textContent = "Error: " + e.message; showSub("Error: " + e.message); setState("idle"); }
   busy = false;
 }
