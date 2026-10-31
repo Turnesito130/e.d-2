@@ -1,51 +1,60 @@
-# E.D.-2 Neural Core 0.1
+# E.D.-2 Neural Core — laboratorio experimental
 
-Primer prototipo de un modelo neuronal de lenguaje entrenado desde cero.
+El núcleo neuronal se ejecuta en JavaScript estándar, sin dependencias externas, APIs de IA ni pesos preentrenados.
 
-## Garantías de diseño
+## Capacidades implementadas
 
-- No llama a Gemini, ChatGPT, Claude ni a APIs de IA.
-- No descarga modelos ni pesos preentrenados.
-- Inicializa sus propios pesos aleatorios.
-- Entrena mediante retropropagación y descenso de gradiente.
-- Funciona con JavaScript estándar y módulos ES.
-- No requiere paquetes externos.
+- **Modelo base:** red neuronal pequeña de predicción del siguiente carácter, entrenada por retropropagación.
+- **Estabilidad:** recorte global de gradientes y validaciones de entradas.
+- **Optimizador Adam:** momentos y corrección de sesgo implementados desde cero. SGD sigue disponible con `optimizer: "sgd"`.
+- **Entrenamiento:** barajado de ejemplos, progreso, pausas para no bloquear la interfaz y parada solicitada.
+- **Evaluación:** pérdida, perplejidad y precisión en un conjunto separado mediante `evaluate(model, ids)`.
+- **Atención:** función de atención escalada y un bloque experimental causal de una cabeza.
+- **Memoria:** almacenamiento local con IndexedDB y alternativa temporal en memoria cuando IndexedDB no está disponible.
+- **Persistencia del modelo:** exportación e importación de vocabulario y pesos.
 
-## Qué es
+## Uso básico
 
-Es un modelo experimental de predicción del siguiente carácter: una ventana de caracteres entra en una capa oculta tanh y una capa softmax predice el carácter siguiente. Es una red neuronal real, pero deliberadamente pequeña.
+```js
+import { createBrain, trainBrain, generateText, evaluate } from "../js/neural-core/index.js";
 
-## Qué NO es
+const brain = createBrain({
+  text: "hola mundo. hola E.D.-2.",
+  contextSize: 8,
+  hiddenSize: 48
+});
 
-No es todavía un Transformer, no tiene comprensión general, no razona como una persona y no es comparable con los asistentes comerciales. El objetivo de esta versión es validar el ciclo completo: tokenizar, inicializar pesos, calcular pérdida, entrenar, generar y exportar/importar.
+const report = await trainBrain(brain, "hola mundo. hola E.D.-2.", {
+  epochs: 20,
+  learningRate: 0.001,
+  optimizer: "adam",
+  onProgress: info => console.log(info)
+});
 
-## Prueba
+console.log(report);
+console.log(generateText(brain, "hola", { maxTokens: 40 }));
+console.log(evaluate(brain.model, brain.tokenizer.encode("hola mundo.")));
+await brain.memory.put("preferencia", "respuestas en español");
+```
 
-Sirve los archivos desde un servidor web estático que admita módulos ES y abre `neural-core/test.html`. También puede probarse en un entorno estático compatible. No se recomienda abrirlo mediante `file://`, porque algunos navegadores bloquean módulos ES locales.
+## Qué significa la atención en esta versión
 
-## Organización del repositorio
+`TinyAttentionBlock` demuestra proyecciones Q/K/V y atención causal en una cabeza. **Todavía no es un Transformer completo**: no tiene entrenamiento por retropropagación de sus parámetros de atención, embeddings aprendidos, bloques apilados ni generación integrada. Es una pieza experimental para la siguiente fase, no una capacidad de conversación lista para producción.
 
-- El código JavaScript de la aplicación vive en `js/`.
-- El prototipo neuronal vive en `js/neural-core/`.
-- Esta carpeta conserva la página de pruebas y esta documentación.
-- `index.html` carga los scripts desde `js/`; el service worker permanece en la raíz.
+## Límites honestos
 
-## Mejoras de estabilidad 0.1
+Este modelo es pequeño y aprende patrones locales del texto que se le proporciona. No tiene conocimiento general, no razona como un asistente avanzado y no se vuelve inteligente solo por añadir más épocas. Un Transformer útil requiere datos, memoria, cálculo y entrenamiento considerables. No se debe confundir una prueba técnica con un asistente comparable a ChatGPT.
 
-- Recorte global de gradientes para limitar actualizaciones excesivas.
-- Validación de tasas de aprendizaje, límites de generación y tokens de prefijo.
-- Rechazo de vocabularios duplicados al importar.
-- Pruebas adicionales para estas condiciones.
+La memoria usa almacenamiento local del navegador. Si IndexedDB no está disponible, la alternativa Map solo dura mientras viva la página. No se envía información a servidores desde estos módulos.
 
-## Próximos pasos
+## Pruebas
 
-1. Ejecutar las pruebas en un navegador con servidor estático.
-2. Añadir barajado de ejemplos y un optimizador Adam.
-3. Añadir evaluación separada de entrenamiento.
-4. Añadir guardado en IndexedDB.
-5. Medir memoria y velocidad en Chromebook.
-6. Diseñar un Transformer pequeño después de validar esta base.
+Sirve el repositorio con un servidor web estático compatible con módulos ES y abre `neural-core/test.html`. Ejecuta las pruebas desde el botón. GitHub muestra el código, pero su visor de archivos no ejecuta los módulos. Las pruebas aún deben ejecutarse en el Chromebook; no se afirma que hayan pasado hasta hacerlo.
 
-## Seguridad y privacidad
+## Próximas fases
 
-El prototipo no transmite el corpus ni los pesos a ningún servidor. La prueba se ejecuta localmente en el navegador. El usuario debe proporcionar el corpus de entrenamiento.
+1. Ejecutar y corregir las pruebas en navegador.
+2. Añadir tokenizer de subpalabras y embeddings.
+3. Entrenar atención y construir bloques Transformer completos.
+4. Integrar recuperación de memoria en el flujo de conversación de E.D.-2.
+5. Medir velocidad y consumo real en Chromebook.
