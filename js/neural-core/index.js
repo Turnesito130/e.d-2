@@ -1,5 +1,6 @@
 // API pública de E.D.-2 Neural Core 0.1
 export { CharTokenizer } from "./tokenizer.js";
+export { SubwordTokenizer } from "./subword-tokenizer.js";
 export { TinyLanguageModel } from "./model.js";
 export { train, makeTrainingPairs } from "./trainer.js";
 export { AdamOptimizer } from "./optimizer.js";
