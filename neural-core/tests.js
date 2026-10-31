@@ -1,6 +1,5 @@
 // E.D.-2 Neural Core — pruebas automáticas básicas
 import { CharTokenizer } from "./tokenizer.js";
-import { TinyLanguageModel } from "./model.js";
 import { makeTrainingPairs, train } from "./trainer.js";
 import { createBrain, trainBrain, generateText, exportBrain, importBrain } from "./index.js";
 
@@ -70,6 +69,27 @@ export async function runCoreTests(onLog = () => {}) {
 
   await test("persistencia: rechaza archivos incompatibles", () => {
     expectThrow(() => importBrain('{"format":"otro","version":1}'), "formato incorrecto");
+  });
+
+
+  await test("API pública: entrena un cerebro y devuelve historial", async () => {
+    const text = "hola hola";
+    const brain = createBrain({ text, contextSize: 2, hiddenSize: 8 });
+    const result = await trainBrain(brain, text, { epochs: 2, learningRate: 0.03, yieldEvery: 10000 });
+    assert(result.stopped === false, "el entrenamiento debe terminar");
+    assert(result.history.length === 2, "debe registrar cada época");
+    assert(result.steps === brain.tokenizer.encode(text).length, "número de pasos");
+  });
+
+  await test("validación: rechaza textos de entrenamiento demasiado cortos", () => {
+    expectThrow(() => createBrain({ text: "a", contextSize: 4 }), "debe rechazar texto corto");
+  });
+
+  await test("persistencia: rechaza pesos con dimensiones incorrectas", () => {
+    const brain = createBrain({ text: "ed dos aprende", contextSize: 3, hiddenSize: 8 });
+    const bundle = JSON.parse(exportBrain(brain));
+    bundle.model.W1[0].pop();
+    expectThrow(() => importBrain(bundle), "debe rechazar dimensiones incorrectas");
   });
 
   onLog("RESULTADO: " + results.length + " pruebas superadas.");
