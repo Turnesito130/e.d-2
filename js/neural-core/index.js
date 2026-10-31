@@ -69,3 +69,5 @@ export function importBrain(json) {
   });
   return { tokenizer, model, memory: new BrainMemory(), optimizer: new AdamOptimizer() };
 }
+
+export { createLearningProfile, loadLearningProfile, saveLearningProfile, deleteLearningProfile, formatStudySteps, buildStudyPromptGuidance } from "./learning-profile.js";
