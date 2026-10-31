@@ -46,7 +46,9 @@ export class CharTokenizer {
 
   static fromJSON(data) {
     if (!data || data.version !== 1 || !Array.isArray(data.chars) ||
-        data.chars.some(ch => typeof ch !== "string" || [...ch].length !== 1)) {
+        data.chars.length < 2 ||
+        data.chars.some(ch => typeof ch !== "string" || [...ch].length !== 1) ||
+        new Set(data.chars).size !== data.chars.length) {
       throw new TypeError("Formato de tokenizador no válido");
     }
     return new CharTokenizer(data.chars);
