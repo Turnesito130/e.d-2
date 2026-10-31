@@ -52,7 +52,7 @@ export class TinyLanguageModel {
     return { x, h, probs: softmax(logits) };
   }
 
-  trainExample(context, target, learningRate = 0.03, gradientClip = 1) {
+  trainExample(context, target, learningRate = 0.003, gradientClip = 1, optimizer = null) {
     if (!Number.isInteger(target) || target < 0 || target >= this.vocabSize) throw new RangeError("Objetivo inválido");
     if (!(learningRate > 0) || !Number.isFinite(learningRate)) throw new RangeError("Tasa de aprendizaje no válida");
     if (!(gradientClip > 0) || !Number.isFinite(gradientClip)) throw new RangeError("Límite de gradiente no válido");
@@ -84,13 +84,23 @@ export class TinyLanguageModel {
     if (!Number.isFinite(gradientNorm)) throw new Error("Gradiente no finito");
     const scale = gradientNorm > gradientClip ? gradientClip / gradientNorm : 1;
 
-    for (let i = 0; i < this.vocabSize; i++) {
-      this.b2[i] -= learningRate * db2[i] * scale;
-      for (let j = 0; j < this.hiddenSize; j++) this.W2[i][j] -= learningRate * dW2[i][j] * scale;
-    }
-    for (let i = 0; i < this.hiddenSize; i++) {
-      this.b1[i] -= learningRate * db1[i] * scale;
-      for (let j = 0; j < x.length; j++) this.W1[i][j] -= learningRate * dW1[i][j] * scale;
+    if (optimizer) {
+      if (typeof optimizer.step !== "function") throw new TypeError("Optimizador no válido");
+      optimizer.step([
+        { params: this.W1, grads: dW1 },
+        { params: this.b1, grads: db1 },
+        { params: this.W2, grads: dW2 },
+        { params: this.b2, grads: db2 }
+      ], learningRate, scale);
+    } else {
+      for (let i = 0; i < this.vocabSize; i++) {
+        this.b2[i] -= learningRate * db2[i] * scale;
+        for (let j = 0; j < this.hiddenSize; j++) this.W2[i][j] -= learningRate * dW2[i][j] * scale;
+      }
+      for (let i = 0; i < this.hiddenSize; i++) {
+        this.b1[i] -= learningRate * db1[i] * scale;
+        for (let j = 0; j < x.length; j++) this.W1[i][j] -= learningRate * dW1[i][j] * scale;
+      }
     }
     return loss;
   }
