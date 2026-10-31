@@ -2,7 +2,7 @@
 import { CharTokenizer } from "./tokenizer.js";
 import { AdamOptimizer } from "./optimizer.js";
 import { evaluate } from "./evaluation.js";
-import { scaledDotProductAttention } from "./attention.js";
+import { scaledDotProductAttention, TinyAttentionBlock } from "./attention.js";
 import { BrainMemory } from "./memory.js";
 import { makeTrainingPairs, train } from "./trainer.js";
 import { createBrain, trainBrain, generateText, exportBrain, importBrain } from "./index.js";
@@ -134,6 +134,12 @@ export async function runCoreTests(onLog = () => {}) {
     const result = scaledDotProductAttention([[1, 0]], [[1, 0], [0, 1]], [[2, 4], [6, 8]]);
     assert(result.weights.length === 2, "dos pesos de atención");
     assert(Math.abs(result.weights.reduce((a, b) => a + b, 0) - 1) < 1e-9, "pesos suman uno");
+  });
+
+  await test("atención: bloque causal procesa una secuencia", () => {
+    const block = new TinyAttentionBlock({ width: 4 });
+    const output = block.forward([[1, 0, 0, 0], [0, 1, 0, 0]]);
+    assert(output.length === 2 && output.every(row => row.length === 4), "salida de atención con dimensiones correctas");
   });
 
   await test("memoria: guarda y recupera una nota", async () => {
