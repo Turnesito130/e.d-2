@@ -10,6 +10,7 @@ export { BrainMemory } from "./memory.js";
 import { CharTokenizer } from "./tokenizer.js";
 import { TinyLanguageModel } from "./model.js";
 import { train } from "./trainer.js";
+import { BrainMemory } from "./memory.js";
 
 
 export function createBrain({ text, contextSize = 8, hiddenSize = 48 } = {}) {
@@ -19,7 +20,7 @@ export function createBrain({ text, contextSize = 8, hiddenSize = 48 } = {}) {
   const tokenizer = new CharTokenizer().fit(text);
   if (tokenizer.size < 2) throw new Error("El texto debe contener al menos dos caracteres distintos");
   const model = new TinyLanguageModel({ vocabSize: tokenizer.size, contextSize, hiddenSize });
-  return { tokenizer, model };
+  return { tokenizer, model, memory: new BrainMemory() };
 }
 
 export async function trainBrain(brain, text, options = {}) {
