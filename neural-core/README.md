@@ -5,6 +5,7 @@ El núcleo neuronal se ejecuta en JavaScript estándar, sin dependencias externa
 ## Capacidades implementadas
 
 - **Modelo base:** red neuronal pequeña de predicción del siguiente carácter, entrenada por retropropagación.
+- **Tokenizador BPE propio:** aprende subpalabras del corpus, sin vocabulario externo; se puede seleccionar con `tokenizerType: "bpe"`. El modo de caracteres sigue disponible por compatibilidad.
 - **Estabilidad:** recorte global de gradientes y validaciones de entradas.
 - **Optimizador Adam:** momentos y corrección de sesgo implementados desde cero. SGD sigue disponible con `optimizer: "sgd"`.
 - **Entrenamiento:** barajado de ejemplos, progreso, pausas para no bloquear la interfaz y parada solicitada.
@@ -54,7 +55,7 @@ Sirve el repositorio con un servidor web estático compatible con módulos ES y 
 ## Próximas fases
 
 1. Ejecutar y corregir las pruebas en navegador.
-2. Añadir tokenizer de subpalabras y embeddings.
+2. Añadir embeddings aprendidos y entrenamiento completo de atención.
 3. Entrenar atención y construir bloques Transformer completos.
 4. Integrar recuperación de memoria en el flujo de conversación de E.D.-2.
 5. Medir velocidad y consumo real en Chromebook.
