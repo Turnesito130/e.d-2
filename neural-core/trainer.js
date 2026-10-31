@@ -21,19 +21,21 @@ export async function train(model, tokenIds, {
 } = {}) {
   if (!Number.isInteger(epochs) || epochs < 1 || epochs > 10000) throw new RangeError("epochs debe estar entre 1 y 10000");
   if (!(learningRate > 0) || !Number.isFinite(learningRate)) throw new RangeError("learningRate no válido");
+  if (!Number.isInteger(yieldEvery) || yieldEvery < 1) throw new RangeError("yieldEvery debe ser un entero positivo");
 
   const pairs = makeTrainingPairs(tokenIds, model.contextSize);
   const history = [];
   let step = 0;
   for (let epoch = 0; epoch < epochs; epoch++) {
     let totalLoss = 0;
-    // Recorrido reproducible de los ejemplos; el barajado se añadirá tras medir esta primera versión.
+    let epochSteps = 0;
     for (const pair of pairs) {
       if (shouldStop()) return { stopped: true, history, steps: step };
       totalLoss += model.trainExample(pair.context, pair.target, learningRate);
       step++;
+      epochSteps++;
       if (step % yieldEvery === 0) {
-        onProgress({ epoch: epoch + 1, epochs, step, loss: totalLoss / (step % pairs.length || pairs.length) });
+        onProgress({ epoch: epoch + 1, epochs, step, loss: totalLoss / epochSteps });
         await new Promise(resolve => setTimeout(resolve, 0));
       }
     }
