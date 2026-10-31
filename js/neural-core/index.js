@@ -24,7 +24,8 @@ export function createBrain({ text, contextSize = 8, hiddenSize = 48, tokenizerT
     ? new SubwordTokenizer().fit(text, { vocabSize })
     : tokenizerType === "char" ? new CharTokenizer().fit(text)
     : (() => { throw new TypeError("tokenizerType debe ser char o bpe"); })();
-  if (tokenizer.size < 2) throw new Error("El texto debe contener al menos dos caracteres distintos");
+  if (tokenizer.size < 2) throw new Error("El texto debe contener al menos dos tokens distintos");
+  if (tokenizer.encode(text).length <= contextSize) throw new Error("El corpus produce muy pocos tokens para el tamaño de contexto elegido");
   const model = new TinyLanguageModel({ vocabSize: tokenizer.size, contextSize, hiddenSize });
   return { tokenizer, model, memory: new BrainMemory(), optimizer: new AdamOptimizer() };
 }
