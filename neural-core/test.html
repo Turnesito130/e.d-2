@@ -17,7 +17,7 @@
   <button id="run">Ejecutar pruebas</button>
   <pre id="log" aria-live="polite">Listo. Pulsa el botón para comenzar.</pre>
   <script type="module">
-    import { runCoreTests } from "./tests.js";
+    import { runCoreTests } from "../js/neural-core/tests.js";
     const log = document.querySelector("#log");
     const button = document.querySelector("#run");
     const write = message => { log.textContent += "\n" + message; };

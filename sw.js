@@ -1,10 +1,10 @@
 /* ev · Service worker: red primero y recursos guardados como respaldo */
 const CACHE_NAME = "ev-v2";
 const APP_FILES = [
-  "./", "./index.html", "./style.css", "./core.js", "./sphere.js", "./ui.js", "./screen.js",
-  "./voice.js", "./brain.js", "./memoria.js", "./acciones.js", "./google.js", "./herramientas.js",
-  "./voz.js", "./guia.js", "./estudio.js", "./profunda.js", "./jarvis.js", "./ajustes.js", "./barra.js",
-  "./copia.js", "./hudinfo.js", "./extras.js", "./manifest.webmanifest", "./icono.svg"
+  "./", "./index.html", "./style.css", "./js/core.js", "./js/sphere.js", "./js/ui.js", "./js/screen.js",
+  "./js/voice.js", "./js/brain.js", "./js/memoria.js", "./js/acciones.js", "./js/google.js", "./js/herramientas.js",
+  "./js/voz.js", "./js/guia.js", "./js/estudio.js", "./js/profunda.js", "./js/jarvis.js", "./js/ajustes.js", "./js/barra.js",
+  "./js/copia.js", "./js/hudinfo.js", "./js/extras.js", "./manifest.webmanifest", "./icono.svg"
 ];
 self.addEventListener("install", event => {
   event.waitUntil(caches.open(CACHE_NAME)
