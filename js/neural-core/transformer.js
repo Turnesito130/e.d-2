@@ -35,7 +35,7 @@ export class TransformerDecoder {
     }));
     this.lmHead=matrix(dModel,vocabSize);
   }
-  forward(tokenIds) {
+  forwardFeatures(tokenIds) {
     const {vocabSize,dModel,heads,layers,maxSeqLen}=this.config;
     if (!Array.isArray(tokenIds)||!tokenIds.length) throw new Error("Se necesita una secuencia de tokens");
     if(tokenIds.length>maxSeqLen) tokenIds=tokenIds.slice(-maxSeqLen);
@@ -66,8 +66,9 @@ export class TransformerDecoder {
         return layerNorm(n1.map((v,j)=>v+ff[j]));
       });
     }
-    return x.map(row=>linear(row,this.lmHead));
+    return x;
   }
+  forward(tokenIds) { return this.forwardFeatures(tokenIds).map(row=>linear(row,this.lmHead)); }
   nextTokenLogits(tokenIds){return this.forward(tokenIds).at(-1);}
   toJSON(){return {format:"ed2-transformer",version:1,config:this.config,embedding:this.embedding,position:this.position,blocks:this.blocks,lmHead:this.lmHead};}
   static fromJSON(data){
