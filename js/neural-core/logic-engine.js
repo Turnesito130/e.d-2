@@ -60,13 +60,15 @@ export function evaluateExpression(source) {
     }
     throw new SyntaxError("Se esperaba un número o paréntesis");
   }
+  // La potencia tiene mayor precedencia que el signo: -2^2 = -(2^2).
+  // El exponente admite signo y la recursión conserva la asociatividad derecha.
   function unary() {
     if (peek()?.type === "+") { take("+"); return unary(); }
     if (peek()?.type === "-") { take("-"); return -unary(); }
-    return primary();
+    return power();
   }
   function power() {
-    const base = unary();
+    const base = primary();
     if (peek()?.type !== "^") return base;
     take("^");
     const exponent = unary();
@@ -75,10 +77,10 @@ export function evaluateExpression(source) {
     return checked(base ** exponent);
   }
   function term() {
-    let value = power();
+    let value = unary();
     while (peek()?.type === "*" || peek()?.type === "/") {
       const op = tokens[cursor++].type;
-      const right = power();
+      const right = unary();
       if (op === "/" && right === 0) throw new RangeError("División por cero");
       value = checked(op === "*" ? value * right : value / right);
     }
