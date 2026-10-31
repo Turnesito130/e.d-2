@@ -98,6 +98,21 @@ export async function runCoreTests(onLog = () => {}) {
     expectThrow(() => importBrain(bundle), "debe rechazar dimensiones incorrectas");
   });
 
+
+  await test("modelo: rechaza tasa de aprendizaje no válida", () => {
+    const brain = createBrain({ text: "hola mundo", contextSize: 2, hiddenSize: 8 });
+    expectThrow(() => brain.model.trainExample([0, 0], 0, NaN), "debe rechazar NaN");
+  });
+
+  await test("generación: rechaza prefijos con tokens inválidos", () => {
+    const brain = createBrain({ text: "hola mundo", contextSize: 2, hiddenSize: 8 });
+    expectThrow(() => brain.model.generate([999], 2), "debe rechazar token fuera del vocabulario");
+  });
+
+  await test("tokenizador: rechaza vocabularios duplicados", () => {
+    expectThrow(() => CharTokenizer.fromJSON({ version: 1, chars: ["a", "a"] }), "debe rechazar duplicados");
+  });
+
   onLog("RESULTADO: " + results.length + " superadas; " + failures.length + " fallidas.");
   return { passed: results, failed: failures };
 }
