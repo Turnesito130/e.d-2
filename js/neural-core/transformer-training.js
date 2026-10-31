@@ -52,9 +52,9 @@ export async function trainTransformerHead(model, tokenIds, {
 }={}) {
   validateModel(model);
   if(!Array.isArray(tokenIds)||tokenIds.length<2||tokenIds.some(t=>!Number.isInteger(t)||t<0||t>=model.config.vocabSize)) throw new TypeError("Corpus tokenizado no válido");
-  if(!Number.isInteger(epochs)||epochs<1||!(learningRate>0)||!finite(learningRate)||!Number.isInteger(batchSize)||batchSize<1||!(gradientClip>0)) throw new RangeError("Hiperparámetros no válidos");
+  if(!Number.isInteger(epochs)||epochs<1||!(learningRate>0)||!finite(learningRate)||!Number.isInteger(batchSize)||batchSize<1||!(gradientClip>0)||!Number.isInteger(yieldEvery)||yieldEvery<1) throw new RangeError("Hiperparámetros no válidos");
   const {dModel,vocabSize,maxSeqLen}=model.config;
-  const m=zerosLike(model.lmHead),v=zerosLike(model.lmHead),mb=Array(vocabSize).fill(0),vb=Array(vocabSize).fill(0);
+  const m=zerosLike(model.lmHead),v=zerosLike(model.lmHead);
   let step=0, seen=0, running=0;
   const history=[];
   for(let epoch=0;epoch<epochs;epoch++){
@@ -62,7 +62,7 @@ export async function trainTransformerHead(model, tokenIds, {
     for(let start=0;start<tokenIds.length-1;start+=batchSize){
       if(shouldStop()) return {stopped:true,history,steps:step,trainedParameters:"lmHead only"};
       const end=Math.min(tokenIds.length-1,start+batchSize);
-      const gw=zerosLike(model.lmHead),gb=Array(vocabSize).fill(0);
+      const gw=zerosLike(model.lmHead);
       let batchLoss=0, n=0;
       for(let i=start;i<end;i++){
         const seq=tokenIds.slice(Math.max(0,i-maxSeqLen+1),i+1);
@@ -70,12 +70,11 @@ export async function trainTransformerHead(model, tokenIds, {
         const logits=model.lmHead[0].map((_,j)=>features.reduce((s,x,k)=>s+x*model.lmHead[k][j],0));
         const grads=outputHeadGradients(features,logits,tokenIds[i+1]);
         batchLoss+=grads.loss;n++;
-        for(let k=0;k<dModel;k++) for(let j=0;j<vocabSize;j++) gw[k][j]+=grads.dW[k][j]/n;
-        for(let j=0;j<vocabSize;j++) gb[j]+=grads.db[j]/n;
+        for(let k=0;k<dModel;k++) for(let j=0;j<vocabSize;j++) gw[k][j]+=grads.dW[k][j];
       }
+      for(let k=0;k<dModel;k++) for(let j=0;j<vocabSize;j++) gw[k][j]/=n;
       let norm2=0;
       for(const row of gw) for(const x of row) norm2+=x*x;
-      for(const x of gb) norm2+=x*x;
       const norm=Math.sqrt(norm2), scale=norm>gradientClip?gradientClip/norm:1;
       step++;
       const b1=.9,b2=.999,eps=1e-8,c1=1-b1**step,c2=1-b2**step;
@@ -83,11 +82,6 @@ export async function trainTransformerHead(model, tokenIds, {
         const g=gw[k][j]*scale;
         m[k][j]=b1*m[k][j]+(1-b1)*g;v[k][j]=b2*v[k][j]+(1-b2)*g*g;
         model.lmHead[k][j]-=learningRate*(m[k][j]/c1)/(Math.sqrt(v[k][j]/c2)+eps);
-      }
-      for(let j=0;j<vocabSize;j++){
-        const g=gb[j]*scale;
-        mb[j]=b1*mb[j]+(1-b1)*g;vb[j]=b2*vb[j]+(1-b2)*g*g;
-        // bias de salida separado para evitar alterar el formato de pesos existente
       }
       epochLoss+=batchLoss;count+=n;seen+=n;running+=batchLoss;
       if(step%yieldEvery===0){onProgress({epoch:epoch+1,step,examples:seen,loss:running/Math.max(1,seen),trainedParameters:"lmHead only"});await new Promise(r=>setTimeout(r,0));}
