@@ -1,0 +1,23 @@
+name: E.D.-2 Neural Core tests
+on:
+  push:
+    branches:
+      - arquitectura/cerebro-propio-0.1
+  pull_request:
+    branches:
+      - arquitectura/cerebro-propio-0.1
+  workflow_dispatch:
+jobs:
+  neural-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Test Transformer inference
+        run: node --experimental-default-type=module js/neural-core/transformer.test.js
+      - name: Test Transformer head training
+        run: node --experimental-default-type=module js/neural-core/transformer-training.test.js
+      - name: Test memory retrieval
+        run: node --experimental-default-type=module js/neural-core/memory.test.js
