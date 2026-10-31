@@ -52,8 +52,10 @@ export class TinyLanguageModel {
     return { x, h, probs: softmax(logits) };
   }
 
-  trainExample(context, target, learningRate = 0.03) {
+  trainExample(context, target, learningRate = 0.03, gradientClip = 1) {
     if (!Number.isInteger(target) || target < 0 || target >= this.vocabSize) throw new RangeError("Objetivo inválido");
+    if (!(learningRate > 0) || !Number.isFinite(learningRate)) throw new RangeError("Tasa de aprendizaje no válida");
+    if (!(gradientClip > 0) || !Number.isFinite(gradientClip)) throw new RangeError("Límite de gradiente no válido");
     const { x, h, probs } = this._forward(context);
     const loss = -Math.log(Math.max(probs[target], 1e-12));
 
@@ -69,13 +71,26 @@ export class TinyLanguageModel {
     const dW1 = this.W1.map((row, i) => row.map((_, j) => dPre[i] * x[j]));
     const db1 = dPre;
 
+    // Recorte global de gradiente: evita actualizaciones enormes e inestables.
+    let normSquared = 0;
+    for (const group of [dW1, dW2, db1, db2]) {
+      for (const row of group) {
+        if (Array.isArray(row)) {
+          for (const value of row) normSquared += value * value;
+        } else normSquared += row * row;
+      }
+    }
+    const gradientNorm = Math.sqrt(normSquared);
+    if (!Number.isFinite(gradientNorm)) throw new Error("Gradiente no finito");
+    const scale = gradientNorm > gradientClip ? gradientClip / gradientNorm : 1;
+
     for (let i = 0; i < this.vocabSize; i++) {
-      this.b2[i] -= learningRate * db2[i];
-      for (let j = 0; j < this.hiddenSize; j++) this.W2[i][j] -= learningRate * dW2[i][j];
+      this.b2[i] -= learningRate * db2[i] * scale;
+      for (let j = 0; j < this.hiddenSize; j++) this.W2[i][j] -= learningRate * dW2[i][j] * scale;
     }
     for (let i = 0; i < this.hiddenSize; i++) {
-      this.b1[i] -= learningRate * db1[i];
-      for (let j = 0; j < x.length; j++) this.W1[i][j] -= learningRate * dW1[i][j];
+      this.b1[i] -= learningRate * db1[i] * scale;
+      for (let j = 0; j < x.length; j++) this.W1[i][j] -= learningRate * dW1[i][j] * scale;
     }
     return loss;
   }
@@ -101,6 +116,8 @@ export class TinyLanguageModel {
 
   generate(prefixIds, maxTokens = 120, temperature = 0.8) {
     if (!Array.isArray(prefixIds) || prefixIds.length === 0) throw new Error("Se necesita un prefijo");
+    if (!Number.isInteger(maxTokens) || maxTokens < 0 || maxTokens > 10000) throw new RangeError("maxTokens debe estar entre 0 y 10000");
+    if (prefixIds.some(id => !Number.isInteger(id) || id < 0 || id >= this.vocabSize)) throw new RangeError("El prefijo contiene tokens inválidos");
     const output = [...prefixIds];
     for (let i = 0; i < maxTokens; i++) {
       const context = Array(this.contextSize).fill(0);
