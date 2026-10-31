@@ -41,9 +41,26 @@ export function outputHeadGradients(features, logits, target) {
 }
 
 function validateModel(model) {
-  if(!model?.config||typeof model.forward!=="function"||!Array.isArray(model.lmHead)) throw new TypeError("TransformerDecoder no compatible");
-  const {dModel,vocabSize}=model.config;
-  if(model.lmHead.length!==dModel||model.lmHead.some(r=>r.length!==vocabSize)) throw new Error("Forma de lmHead incompatible");
+  if(!model?.config||typeof model.forwardFeatures!=="function"||!Array.isArray(model.lmHead)) throw new TypeError("TransformerDecoder no compatible");
+  const {dModel,vocabSize,maxSeqLen}=model.config;
+  if(!Number.isInteger(dModel)||!Number.isInteger(vocabSize)||!Number.isInteger(maxSeqLen)||
+     model.lmHead.length!==dModel||model.lmHead.some(r=>!Array.isArray(r)||r.length!==vocabSize||r.some(x=>!finite(x)))) {
+    throw new Error("Forma o valores de lmHead incompatibles");
+  }
+}
+function validateTokens(tokenIds, model) {
+  if(!Array.isArray(tokenIds)||tokenIds.length<2||
+     tokenIds.some(t=>!Number.isInteger(t)||t<0||t>=model.config.vocabSize)) {
+    throw new TypeError("Corpus tokenizado no válido");
+  }
+}
+function getLastFeatures(model, sequence) {
+  const rows=model.forwardFeatures(sequence);
+  const features=rows?.at(-1);
+  if(!Array.isArray(features)||features.length!==model.config.dModel||features.some(x=>!finite(x))) {
+    throw new Error("El Transformer devolvió features no válidas");
+  }
+  return features;
 }
 
 // Forward expuesto por el Transformer debe devolver features finales mediante forwardFeatures().
@@ -51,7 +68,7 @@ export async function trainTransformerHead(model, tokenIds, {
   epochs=1, learningRate=1e-3, batchSize=8, gradientClip=1, onProgress=()=>{}, shouldStop=()=>{}, yieldEvery=100
 }={}) {
   validateModel(model);
-  if(!Array.isArray(tokenIds)||tokenIds.length<2||tokenIds.some(t=>!Number.isInteger(t)||t<0||t>=model.config.vocabSize)) throw new TypeError("Corpus tokenizado no válido");
+  validateTokens(tokenIds,model);
   if(!Number.isInteger(epochs)||epochs<1||!(learningRate>0)||!finite(learningRate)||!Number.isInteger(batchSize)||batchSize<1||!(gradientClip>0)||!Number.isInteger(yieldEvery)||yieldEvery<1) throw new RangeError("Hiperparámetros no válidos");
   const {dModel,vocabSize,maxSeqLen}=model.config;
   const m=zerosLike(model.lmHead),v=zerosLike(model.lmHead);
@@ -66,7 +83,7 @@ export async function trainTransformerHead(model, tokenIds, {
       let batchLoss=0, n=0;
       for(let i=start;i<end;i++){
         const seq=tokenIds.slice(Math.max(0,i-maxSeqLen+1),i+1);
-        const features=model.forwardFeatures(seq).at(-1);
+        const features=getLastFeatures(model,seq);
         const logits=model.lmHead[0].map((_,j)=>features.reduce((s,x,k)=>s+x*model.lmHead[k][j],0));
         const grads=outputHeadGradients(features,logits,tokenIds[i+1]);
         batchLoss+=grads.loss;n++;
@@ -95,7 +112,7 @@ export async function trainTransformerHead(model, tokenIds, {
 
 export function evaluateTransformer(model, tokenIds) {
   validateModel(model);
-  if(!Array.isArray(tokenIds)||tokenIds.length<2) throw new TypeError("Se necesitan al menos dos tokens");
+  validateTokens(tokenIds,model);
   let loss=0,correct=0,count=0;
   for(let i=0;i<tokenIds.length-1;i++){
     const seq=tokenIds.slice(Math.max(0,i-model.config.maxSeqLen+1),i+1);
