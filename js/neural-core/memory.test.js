@@ -1,0 +1,12 @@
+import assert from "node:assert/strict";
+import { BrainMemory } from "./memory.js";
+const memory=new BrainMemory({name:"ed2-test-memory-"+Date.now()});
+await memory.put("school",{text:"Mañana tengo un examen de matemáticas sobre fracciones"});
+await memory.put("project",{text:"E.D.-2 necesita mejorar su arquitectura neuronal y el entrenamiento"});
+await memory.put("unrelated",{text:"Receta de pan con harina y agua"});
+const hits=await memory.search("examen matematicas fracciones",{limit:2});
+assert.equal(hits[0].key,"school");
+const context=await memory.buildContext("arquitectura neuronal",{limit:2});
+assert.equal(context[0].key,"project");
+await memory.delete("school");
+console.log("BrainMemory retrieval: 1 grupo de pruebas superado.");
