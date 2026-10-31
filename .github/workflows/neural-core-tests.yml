@@ -21,3 +21,5 @@ jobs:
         run: node --experimental-default-type=module js/neural-core/transformer-training.test.js
       - name: Test memory retrieval
         run: node --experimental-default-type=module js/neural-core/memory.test.js
+      - name: Test deterministic logic engine
+        run: node --experimental-default-type=module js/neural-core/logic-engine.test.js
