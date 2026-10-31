@@ -52,6 +52,30 @@ export class TinyLanguageModel {
     return { x, h, probs: softmax(logits) };
   }
 
+  // Ruta de inferencia dispersa: solo lee los pesos de los tokens presentes.
+  // Evita construir y recorrer el vector one-hot completo en cada token generado.
+  _forwardFast(context) {
+    if (!Array.isArray(context) || context.length !== this.contextSize) {
+      throw new Error("Longitud de contexto incorrecta");
+    }
+    const h = Array(this.hiddenSize);
+    for (let i = 0; i < this.hiddenSize; i++) {
+      let sum = this.b1[i];
+      const row = this.W1[i];
+      for (let pos = 0; pos < this.contextSize; pos++) {
+        const token = context[pos];
+        if (!Number.isInteger(token) || token < 0 || token >= this.vocabSize) {
+          throw new RangeError("Token inválido");
+        }
+        sum += row[pos * this.vocabSize + token];
+      }
+      h[i] = Math.tanh(sum);
+    }
+    const logits = this.W2.map((row, i) =>
+      row.reduce((sum, weight, j) => sum + weight * h[j], this.b2[i]));
+    return { h, probs: softmax(logits) };
+  }
+
   trainExample(context, target, learningRate = 0.003, gradientClip = 1, optimizer = null) {
     if (!Number.isInteger(target) || target < 0 || target >= this.vocabSize) throw new RangeError("Objetivo inválido");
     if (!(learningRate > 0) || !Number.isFinite(learningRate)) throw new RangeError("Tasa de aprendizaje no válida");
@@ -106,7 +130,7 @@ export class TinyLanguageModel {
   }
 
   predict(context) {
-    const probs = this._forward(context).probs;
+    const probs = this._forwardFast(context).probs;
     let best = 0;
     for (let i = 1; i < probs.length; i++) if (probs[i] > probs[best]) best = i;
     return { token: best, probabilities: probs };
@@ -114,7 +138,7 @@ export class TinyLanguageModel {
 
   sample(context, temperature = 0.8) {
     if (!(temperature > 0) || !Number.isFinite(temperature)) throw new RangeError("Temperatura no válida");
-    const probs = this._forward(context).probs.map(p => Math.pow(Math.max(p, 1e-12), 1 / temperature));
+    const probs = this._forwardFast(context).probs.map(p => Math.pow(Math.max(p, 1e-12), 1 / temperature));
     const total = probs.reduce((a, b) => a + b, 0);
     let r = Math.random() * total;
     for (let i = 0; i < probs.length; i++) {
