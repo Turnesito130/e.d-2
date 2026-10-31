@@ -7,6 +7,7 @@ export { AdamOptimizer } from "./optimizer.js";
 export { evaluate } from "./evaluation.js";
 export { scaledDotProductAttention, TinyAttentionBlock } from "./attention.js";
 export { BrainMemory } from "./memory.js";
+export { trainTransformerHead, evaluateTransformer, crossEntropy, crossEntropyGradient, outputHeadGradients, createTransformerCheckpoint } from "./transformer-training.js";
 
 import { CharTokenizer } from "./tokenizer.js";
 import { SubwordTokenizer } from "./subword-tokenizer.js";
