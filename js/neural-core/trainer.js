@@ -23,6 +23,7 @@ export async function train(model, tokenIds, {
   if (!(learningRate > 0) || !Number.isFinite(learningRate)) throw new RangeError("learningRate no válido");
   if (!Number.isInteger(yieldEvery) || yieldEvery < 1) throw new RangeError("yieldEvery debe ser un entero positivo");
 
+  if (typeof onProgress !== "function" || typeof shouldStop !== "function") throw new TypeError("onProgress y shouldStop deben ser funciones");
   const pairs = makeTrainingPairs(tokenIds, model.contextSize);
   const history = [];
   let step = 0;
