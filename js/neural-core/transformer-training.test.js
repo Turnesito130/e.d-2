@@ -49,4 +49,4 @@ async function testTraining() {
   await assert.rejects(()=>trainTransformerHead(model,[1,2,99]),/Corpus tokenizado/);
 }
 testCrossEntropyGradient();testHeadGradient();testOutputHeadFiniteDifference();await testTraining();
-console.log("Transformer head training: 3 grupos de pruebas superados.");
+console.log("Transformer full backprop training: pruebas superadas.");
