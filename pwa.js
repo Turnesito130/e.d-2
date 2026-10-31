@@ -1,14 +1,35 @@
-/* ev · Service worker: primero la red, la copia guardada si no hay internet */
-const C = "ev-v1";
-const FILES = ["./", "index.html", "style.css", "core.js", "sphere.js", "ui.js", "screen.js", "voice.js", "brain.js", "memoria.js", "acciones.js", "google.js", "herramientas.js", "voz.js", "pwa.js", "main.js", "icono.svg"];
-self.addEventListener("install", e => {
-  e.waitUntil(caches.open(C).then(c => Promise.all(FILES.map(f => c.add(f).catch(() => {})))).then(() => self.skipWaiting()));
+/* ev · Service worker: red primero y recursos guardados como respaldo */
+const C = "ev-v2";
+const FILES = [
+  "./", "index.html", "style.css", "core.js", "sphere.js", "ui.js", "screen.js",
+  "voice.js", "brain.js", "memoria.js", "acciones.js", "google.js", "herramientas.js",
+  "voz.js", "guia.js", "estudio.js", "profunda.js", "jarvis.js", "ajustes.js", "barra.js",
+  "copia.js", "hudinfo.js", "extras.js", "pwa.js", "main.js", "manifest.webmanifest", "icono.svg"
+];
+self.addEventListener("install", event => {
+  event.waitUntil(
+    caches.open(C).then(cache => Promise.all(FILES.map(file => cache.add(file).catch(() => null))))
+      .then(() => self.skipWaiting())
+  );
 });
-self.addEventListener("activate", e => {
-  e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x !== C).map(x => caches.delete(x)))).then(() => self.clients.claim()));
+self.addEventListener("activate", event => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.filter(key => key !== C).map(key => caches.delete(key))))
+      .then(() => self.clients.claim())
+  );
 });
-self.addEventListener("fetch", e => {
-  if (e.request.method !== "GET" || new URL(e.request.url).origin !== location.origin) return;
-  e.respondWith(fetch(e.request, { cache: "no-cache" }).then(r => { const cp = r.clone(); caches.open(C).then(c => c.put(e.request, cp)); return r; })
-    .catch(() => caches.match(e.request, { ignoreSearch: true })));
+self.addEventListener("fetch", event => {
+  if (event.request.method !== "GET" || new URL(event.request.url).origin !== self.location.origin) return;
+  event.respondWith(
+    fetch(event.request).then(response => {
+      if (response && response.ok) {
+        const copy = response.clone();
+        caches.open(C).then(cache => cache.put(event.request, copy)).catch(() => {});
+      }
+      return response;
+    }).catch(() => caches.match(event.request, { ignoreSearch: true }).then(cached => {
+      if (cached) return cached;
+      return new Response("Sin conexión y recurso no guardado.", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
+    }))
+  );
 });
