@@ -10,7 +10,7 @@ async function loadLocal() {
     const w = await import("https://esm.run/@mlc-ai/web-llm");
     const list = w.prebuiltAppConfig.model_list, want = store.get("ed_lmod");
     let id = (list.find(m => m.model_id === want) || {}).model_id;
-    if (!id) for (const re of [/Qwen2\.5-1\.5B-Instruct-q4f16_1/, /Llama-3\.2-1B-Instruct-q4f16_1/, /Qwen2\.5-0\.5B-Instruct-q4f16_1/]) {
+    if (!id) for (const re of [/Qwen2\\.5-1\\.5B-Instruct-q4f16_1/, /Llama-3\\.2-1B-Instruct-q4f16_1/, /Qwen2\\.5-0\\.5B-Instruct-q4f16_1/]) {
       const f = list.find(m => re.test(m.model_id)); if (f) { id = f.model_id; break; }
     }
     if (!id) id = (list.find(m => m.low_resource_required) || list[0]).model_id;
@@ -21,26 +21,26 @@ async function loadLocal() {
 }
 async function* localChunks(text) {
   const msgs = [{ role: "system", content: sysFull() },
-    ...history.map(h => ({ role: h.role === "model" ? "assistant" : "user", content: h.parts[0].text })),
+    ...history.slice(-10).map(h => ({ role: h.role === "model" ? "assistant" : "user", content: h.parts[0].text })),
     { role: "user", content: text }];
-  const st = await llm.chat.completions.create({ messages: msgs, stream: true, max_tokens: 400, temperature: .7 });
+  const st = await llm.chat.completions.create({ messages: msgs, stream: true, max_tokens: 320, temperature: .7 });
   for await (const ch of st) { const c = ch.choices[0] && ch.choices[0].delta && ch.choices[0].delta.content; if (c) yield c; }
 }
 async function* geminiChunks(key, text, withShot) {
-  const model = store.get("ed_mod") || "gemini-3.5-flash", parts = [{ text }];
+  const model = store.get("ed_mod") || "gemini-3.5-flash-lite", parts = [{ text }];
   if (withShot) parts.push({ inline_data: { mime_type: "image/jpeg", data: await frame() } });
-  const gen = { maxOutputTokens: 600 };
+  const gen = { maxOutputTokens: 400 };
   if (model.includes("2.5")) gen.thinkingConfig = { thinkingBudget: 0 };
   const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {
     method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({ system_instruction: { parts: [{ text: sysFull() }] }, contents: [...history, { role: "user", parts }], generationConfig: gen })
+    body: JSON.stringify({ system_instruction: { parts: [{ text: sysFull() }] }, contents: [...history.slice(-10), { role: "user", parts }], generationConfig: gen })
   });
   if (!r.ok) throw new Error("Gemini " + r.status);
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "";
   while (true) {
     const { done, value } = await rd.read(); if (done) break;
     buf += dec.decode(value, { stream: true });
-    const lines = buf.split("\n"); buf = lines.pop();
+    const lines = buf.split("\\n"); buf = lines.pop();
     for (const l of lines) {
       if (!l.startsWith("data:")) continue;
       let j; try { j = JSON.parse(l.slice(5)); } catch (e) { continue; }
@@ -52,13 +52,13 @@ async function* geminiChunks(key, text, withShot) {
 
 /* ---------- Preguntar ---------- */
 async function ask(text, byText) {
-    if (busy) return; viaText = !!byText;
+  if (busy) return; viaText = !!byText;
   if (await commandHook(text, byText)) return;
   const key = store.get("ed_k1"), mode = store.get("ed_brain") || "gemini";
   const needShot = !!stream && wantsScreen.test(text), useLocal = mode === "local" && !needShot;
   if (!useLocal && !key) { openSet(); showSub(mode === "local" ? "Para ver tu pantalla necesito la clave de Gemini." : "Necesito tu clave de Gemini."); return; }
-  busy = true; stopVoice(); hideImages(); $("you").textContent = text; setState("think"); showSub("…", true);
-  if (byText) { addMsg("u", text); bub = addMsg("e", "…"); } else bub = null;
+  busy = true; stopVoice(); hideImages(); $("you").textContent = text; setState("think"); showSub("Preparando respuesta…", true);
+  if (byText) { addMsg("u", text); bub = addMsg("e", "Estoy pensando…"); $("chat").classList.add("open"); } else bub = null;
   if (!stream && /pantalla/i.test(text)) {
     busy = false; setState("idle"); speak("Toca la esfera y elige tu pantalla para que pueda verla.");
     if (bub) bub.textContent = "Toca la esfera y elige tu pantalla para que pueda verla."; showSub("Toca la esfera para compartir tu pantalla."); return;
@@ -71,15 +71,15 @@ async function ask(text, byText) {
       catch (e) { if (!key) throw e; showSub("El cerebro local falló (" + e.message + "). Uso Gemini.", true); src = geminiChunks(key, text, false); }
     } else src = geminiChunks(key, text, needShot);
     for await (const c of src) {
-      full += c; vis = full.split("[[")[0].replace(/\[$/, ""); pend += vis.slice(sent); sent = vis.length; showSub(vis, true);
-      if (bub) { bub.textContent = vis; $("clog").scrollTop = 1e9; }
-           let m; while ((m = pend.match(/^(?:[\s\S]*?[.!?\n]|[\s\S]{45,}?[,;:])(\s|$)/))) { speak(m[0]); pend = pend.slice(m[0].length); }
+      full += c; vis = full.split("[[")[0].replace(/\\[$/, ""); pend += vis.slice(sent); sent = vis.length; showSub(vis, true);
+      if (bub) { bub.textContent = vis; $("clog").scrollTop = $("clog").scrollHeight; }
+      let m; while ((m = pend.match(/^(?:[\\s\\S]*?[.!?\\n]|[\\s\\S]{45,}?[,;:])(\\s|$)/))) { speak(m[0]); pend = pend.slice(m[0].length); }
     }
     if (pend.trim()) speak(pend);
     if (!full) { if (bub) bub.textContent = "No recibí respuesta."; showSub("No recibí respuesta."); setState("idle"); }
     history.push({ role: "user", parts: [{ text }] }, { role: "model", parts: [{ text: vis }] });
-    history = history.slice(-20); showSub(vis);
-    const mk = full.match(/\[\[\s*im[aá]genes?\s*:\s*([^\]]+)\]\]/i); if (mk) showImages(mk[1]);
+    history = history.slice(-12); showSub(vis);
+    const mk = full.match(/\\[\\[\\s*im[aá]genes?\\s*:\\s*([^\\]]+)\\]\\]/i); if (mk) showImages(mk[1]);
   } catch (e) { if (bub) bub.textContent = "Error: " + e.message; showSub("Error: " + e.message); setState("idle"); }
   busy = false;
 }
