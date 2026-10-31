@@ -12,7 +12,7 @@ async function runTool(name, a = {}) {
       setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak(label + ": ya terminó el tiempo."); }, ms); return "Temporizador puesto.";
     }
     if (name === "anotar") { const m = memList(); m.push(String(a.texto || "")); memSave(m); return "Anotado."; }
-    if (name === "calcular") { const r = calc(String(a.expresion || "")); return r === null ? "Expresión no válida." : r; }
+    if (name === "calcular") { const r = await calc(String(a.expresion || "")); return r === null ? "Expresión no válida." : r; }
     if (name === "modo_estudio") { setStudy(!!a.activar); return "Modo estudio " + (a.activar ? "activado" : "desactivado") + "."; }
     if (name === "correos_sin_leer") return typeof gmailUnread === "function" ? await gmailUnread() : "Conector de correo no disponible.";
     if (name === "tareas_pendientes") return typeof classroomTasks === "function" ? await classroomTasks() : "Conector de Classroom no disponible.";
