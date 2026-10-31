@@ -9,17 +9,21 @@ export { scaledDotProductAttention, TinyAttentionBlock } from "./attention.js";
 export { BrainMemory } from "./memory.js";
 
 import { CharTokenizer } from "./tokenizer.js";
+import { SubwordTokenizer } from "./subword-tokenizer.js";
 import { TinyLanguageModel } from "./model.js";
 import { train } from "./trainer.js";
 import { BrainMemory } from "./memory.js";
 import { AdamOptimizer } from "./optimizer.js";
 
 
-export function createBrain({ text, contextSize = 8, hiddenSize = 48 } = {}) {
+export function createBrain({ text, contextSize = 8, hiddenSize = 48, tokenizerType = "char", vocabSize = 512 } = {}) {
   if (typeof text !== "string" || text.length < contextSize + 2) {
     throw new Error("Proporciona un texto de entrenamiento más largo");
   }
-  const tokenizer = new CharTokenizer().fit(text);
+  const tokenizer = tokenizerType === "bpe"
+    ? new SubwordTokenizer().fit(text, { vocabSize })
+    : tokenizerType === "char" ? new CharTokenizer().fit(text)
+    : (() => { throw new TypeError("tokenizerType debe ser char o bpe"); })();
   if (tokenizer.size < 2) throw new Error("El texto debe contener al menos dos caracteres distintos");
   const model = new TinyLanguageModel({ vocabSize: tokenizer.size, contextSize, hiddenSize });
   return { tokenizer, model, memory: new BrainMemory(), optimizer: new AdamOptimizer() };
@@ -50,7 +54,9 @@ export function importBrain(json) {
   if (!data || data.format !== "ed2-brain-bundle" || data.version !== 1) {
     throw new TypeError("Archivo de cerebro E.D.-2 no válido");
   }
-  const tokenizer = CharTokenizer.fromJSON(data.tokenizer);
+  const tokenizer = data.tokenizer?.type === "bpe"
+    ? SubwordTokenizer.fromJSON(data.tokenizer)
+    : CharTokenizer.fromJSON(data.tokenizer);
   const model = new TinyLanguageModel({
     vocabSize: tokenizer.size,
     contextSize: data.model.contextSize,
