@@ -2,10 +2,15 @@
 export { CharTokenizer } from "./tokenizer.js";
 export { TinyLanguageModel } from "./model.js";
 export { train, makeTrainingPairs } from "./trainer.js";
+export { AdamOptimizer } from "./optimizer.js";
+export { evaluate } from "./evaluation.js";
+export { scaledDotProductAttention, TinyAttentionBlock } from "./attention.js";
+export { BrainMemory } from "./memory.js";
 
 import { CharTokenizer } from "./tokenizer.js";
 import { TinyLanguageModel } from "./model.js";
 import { train } from "./trainer.js";
+
 
 export function createBrain({ text, contextSize = 8, hiddenSize = 48 } = {}) {
   if (typeof text !== "string" || text.length < contextSize + 2) {
