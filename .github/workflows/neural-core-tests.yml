@@ -25,4 +25,8 @@ jobs:
         run: node --experimental-default-type=module js/neural-core/logic-engine.test.js
       - name: Test learning profile
         run: node --experimental-default-type=module js/neural-core/learning-profile.test.js
+      - name: Test local study tutor
+        run: node --experimental-default-type=module js/neural-core/study-tutor.test.js
+      - name: Test hybrid reasoning coordinator
+        run: node --experimental-default-type=module js/neural-core/reasoning-coordinator.test.js
 
