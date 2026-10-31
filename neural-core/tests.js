@@ -20,10 +20,16 @@ function meanLoss(model, pairs) {
 
 export async function runCoreTests(onLog = () => {}) {
   const results = [];
+  const failures = [];
   const test = async (name, fn) => {
-    await fn();
-    results.push(name);
-    onLog("✓ " + name);
+    try {
+      await fn();
+      results.push(name);
+      onLog("✓ " + name);
+    } catch (error) {
+      failures.push({ name, message: error && error.message ? error.message : String(error) });
+      onLog("✗ " + name + ": " + failures[failures.length - 1].message);
+    }
   };
 
   await test("tokenizador: codifica y decodifica texto", () => {
@@ -92,6 +98,6 @@ export async function runCoreTests(onLog = () => {}) {
     expectThrow(() => importBrain(bundle), "debe rechazar dimensiones incorrectas");
   });
 
-  onLog("RESULTADO: " + results.length + " pruebas superadas.");
-  return results;
+  onLog("RESULTADO: " + results.length + " superadas; " + failures.length + " fallidas.");
+  return { passed: results, failed: failures };
 }
