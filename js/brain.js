@@ -29,11 +29,11 @@ async function* localChunks(text) {
 async function* geminiChunks(key, text, withShot) {
   const model = store.get("ed_mod") || "gemini-3.5-flash-lite", parts = [{ text }];
   if (withShot) parts.push({ inline_data: { mime_type: "image/jpeg", data: await frame() } });
-  const gen = { maxOutputTokens: 400 };
+  const gen = { maxOutputTokens: 192 };
   if (model.includes("2.5")) gen.thinkingConfig = { thinkingBudget: 0 };
   const r = await fetch("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model) + ":streamGenerateContent?alt=sse", {
     method: "POST", headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-    body: JSON.stringify({ system_instruction: { parts: [{ text: sysFull() }] }, contents: [...history.slice(-10), { role: "user", parts }], generationConfig: gen })
+    body: JSON.stringify({ system_instruction: { parts: [{ text: sysFull() }] }, contents: [...history.slice(-6), { role: "user", parts }], generationConfig: gen })
   });
   if (!r.ok) throw new Error("Gemini " + r.status);
   const rd = r.body.getReader(), dec = new TextDecoder(); let buf = "";
