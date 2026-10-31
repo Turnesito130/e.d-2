@@ -1,7 +1,7 @@
 /* E.D.-2 · Transformer causal decoder (inferencia v1).
  * Implementación propia en JavaScript, sin APIs ni modelos externos.
- * Nota: esta versión define el forward completo; el entrenamiento por gradiente
- * se incorpora en el siguiente módulo/fase y no debe confundirse con inferencia.
+ * Expone forwardFeatures() para extracción de estados finales y forward() para logits.
+ * El entrenamiento actual de etapa 1 actualiza solo lmHead; el cuerpo está congelado.
  */
 const rand = (n, scale = 0.02) => Array.from({length:n}, () =>
   Array.from({length:n}, () => (Math.random() * 2 - 1) * scale));
