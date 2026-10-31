@@ -1,5 +1,9 @@
 // E.D.-2 Neural Core — pruebas automáticas básicas
 import { CharTokenizer } from "./tokenizer.js";
+import { AdamOptimizer } from "./optimizer.js";
+import { evaluate } from "./evaluation.js";
+import { scaledDotProductAttention } from "./attention.js";
+import { BrainMemory } from "./memory.js";
 import { makeTrainingPairs, train } from "./trainer.js";
 import { createBrain, trainBrain, generateText, exportBrain, importBrain } from "./index.js";
 
@@ -111,6 +115,32 @@ export async function runCoreTests(onLog = () => {}) {
 
   await test("tokenizador: rechaza vocabularios duplicados", () => {
     expectThrow(() => CharTokenizer.fromJSON({ version: 1, chars: ["a", "a"] }), "debe rechazar duplicados");
+  });
+
+  await test("optimizador: Adam actualiza parámetros y conserva estado", () => {
+    const optimizer = new AdamOptimizer();
+    const params = [1, -1];
+    optimizer.step([{ params, grads: [0.5, -0.25] }], 0.01);
+    assert(params[0] < 1 && params[1] > -1, "Adam debe mover los parámetros");
+  });
+
+  await test("evaluación: calcula pérdida y perplejidad", () => {
+    const brain = createBrain({ text: "abababababab", contextSize: 2, hiddenSize: 8 });
+    const report = evaluate(brain.model, brain.tokenizer.encode("abab"));
+    assert(Number.isFinite(report.loss) && report.perplexity >= 1, "métricas válidas");
+  });
+
+  await test("atención: calcula pesos normalizados", () => {
+    const result = scaledDotProductAttention([[1, 0]], [[1, 0], [0, 1]], [[2, 4], [6, 8]]);
+    assert(result.weights.length === 2, "dos pesos de atención");
+    assert(Math.abs(result.weights.reduce((a, b) => a + b, 0) - 1) < 1e-9, "pesos suman uno");
+  });
+
+  await test("memoria: guarda y recupera una nota", async () => {
+    const memory = new BrainMemory({ name: "ed2-test-memory" });
+    await memory.put("prueba", "memoria local");
+    assert(await memory.get("prueba") === "memoria local", "nota recuperada");
+    await memory.delete("prueba");
   });
 
   onLog("RESULTADO: " + results.length + " superadas; " + failures.length + " fallidas.");
