@@ -14,11 +14,11 @@ function showSub(t, keep) {
 }
 
 /* ---------- Ajustes ---------- */
-["k1", "mod", "lmod", "k2", "vid"].forEach(i => $(i).value = store.get("ed_" + i));
+["lmod", "k2", "vid"].forEach(i => $(i).value = store.get("ed_" + i));
 $("brain").value = store.get("ed_brain") || "gemini";
-function openSet() { $("set").style.display = "block"; $("k1").focus(); }
+function openSet() { $("set").style.display = "block"; $("brain").focus(); }
 $("save").onclick = () => {
-  ["k1", "mod", "lmod", "k2", "vid"].forEach(i => store.set("ed_" + i, $(i).value.trim()));
+  ["lmod", "k2", "vid"].forEach(i => store.set("ed_" + i, $(i).value.trim()));
   store.set("ed_brain", $("brain").value);
   $("set").style.display = "none"; showSub("Listo, guardado.");
   if ($("brain").value === "local") loadLocal().then(() => showSub("Cerebro local listo.")).catch(e => showSub("Cerebro local: " + e.message));
