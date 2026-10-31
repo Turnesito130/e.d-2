@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#101827"><title>E.D.-2 | Finanzas y Trading</title>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#141f30;--line:#29384d;--muted:#9aabc1;--text:#edf3fb;--accent:#65d6b2;--warn:#f4c56a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:1100px;margin:auto;padding:24px 16px 60px}a{color:var(--accent)}header{display:flex;justify-content:space-between;gap:16px;align-items:center;flex-wrap:wrap}h1{font-size:clamp(25px,4vw,36px);margin:0}h2{font-size:20px;margin:0 0 14px}.sub,.muted{color:var(--muted)}.notice{border:1px solid #765b2a;background:#2a2418;color:#ffe4ae;padding:12px 14px;border-radius:12px;margin:18px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:16px;margin-top:16px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;min-width:0}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:5px}.field.full{grid-column:1/-1}label{font-size:13px;color:var(--muted)}input,select,textarea{width:100%;background:#0c1523;color:var(--text);border:1px solid var(--line);border-radius:9px;padding:10px;font:inherit;min-width:0}button{border:0;border-radius:9px;background:var(--accent);color:#092018;font-weight:700;padding:11px 15px;cursor:pointer}button.secondary{background:#29384d;color:var(--text)}button.danger{background:#57303a;color:#ffe3e8}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}.result{background:#0c1523;border:1px solid var(--line);border-radius:12px;padding:14px;margin-top:14px}.big{font-size:27px;font-weight:750;color:var(--accent)}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:#0c1523;border-radius:10px;padding:11px}.stat b{display:block;font-size:18px}.tablewrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;padding:9px;border-bottom:1px solid var(--line);white-space:nowrap}th{color:var(--muted)}.positive{color:var(--accent)}.negative{color:#ff9aa8}.small{font-size:12px}.back{white-space:nowrap}@media(max-width:480px){.fields{grid-template-columns:1fr}.field.full{grid-column:auto}}
+</style></head>
+<body><main>
+<header><div><div class="sub">E.D.-2 · MÓDULO FINANCIERO</div><h1>Trading Lab</h1><div class="sub">Calculadora de riesgo · simulador · diario de operaciones</div></div><a class="back" href="index.html">← Volver a E.D.-2</a></header>
+<div class="notice"><b>Modo seguro: simulación solamente.</b> Esta herramienta no recibe cotizaciones en directo, no predice el mercado y no envía órdenes a brokers. No uses sus cálculos como garantía de pérdida máxima ni como recomendación de compra o venta.</div>
+<div class="grid">
+<section class="panel"><h2>1. Tamaño de posición</h2><p class="muted small">Introduce los datos de tu operación demo. El tamaño se calcula con el riesgo monetario y la distancia al stop.</p>
+<div class="fields">
+<div class="field"><label for="capital">Capital simulado (€)</label><input id="capital" type="number" min="0.01" step="any" value="10000"></div>
+<div class="field"><label for="risk">Riesgo por operación (%)</label><input id="risk" type="number" min="0.01" max="100" step="any" value="1"></div>
+<div class="field"><label for="entry">Precio de entrada</label><input id="entry" type="number" min="0.00000001" step="any" placeholder="Ej. 150"></div>
+<div class="field"><label for="stop">Precio del stop</label><input id="stop" type="number" min="0" step="any" placeholder="Ej. 147"></div>
+<div class="field"><label for="point">Valor por punto y unidad (€)</label><input id="point" type="number" min="0.00000001" step="any" value="1"></div>
+<div class="field"><label for="fee">Coste estimado total (€)</label><input id="fee" type="number" min="0" step="any" value="0"></div>
+<div class="field"><label for="side">Dirección</label><select id="side"><option value="long">Largo (compra)</option><option value="short">Corto (venta)</option></select></div>
+<div class="field"><label for="symbol">Instrumento</label><input id="symbol" maxlength="30" placeholder="Ej. AAPL, EUR/USD"></div>
+</div><div class="actions"><button id="calc">Calcular riesgo</button></div><div id="calcResult" class="result" aria-live="polite">Introduce entrada y stop para calcular.</div>
+</section>
+<section class="panel"><h2>2. Registrar operación demo</h2><p class="muted small">Registra una operación que hayas simulado. No se ejecuta ninguna orden.</p>
+<div class="fields">
+<div class="field"><label for="qty">Cantidad/unidades</label><input id="qty" type="number" min="0" step="any" placeholder="Calculada arriba"></div>
+<div class="field"><label for="exit">Precio de salida</label><input id="exit" type="number" min="0" step="any" placeholder="Al cerrar"></div>
+<div class="field full"><label for="thesis">Motivo / hipótesis</label><textarea id="thesis" rows="3" maxlength="500" placeholder="¿Qué condición justificaba la entrada?"></textarea></div>
+</div><div class="actions"><button id="saveTrade">Guardar operación cerrada</button></div><div id="saveMsg" class="muted small" aria-live="polite"></div>
+</section>
+<section class="panel"><h2>3. Resumen del diario</h2><div class="stats"><div class="stat"><span class="muted small">Operaciones</span><b id="nTrades">0</b></div><div class="stat"><span class="muted small">Resultado neto (€)</span><b id="net">0,00 €</b></div><div class="stat"><span class="muted small">Ganadoras</span><b id="wins">0</b></div><div class="stat"><span class="muted small">Tasa de acierto</span><b id="winrate">—</b></div></div><div class="actions"><button class="secondary" id="export">Exportar CSV</button><button class="danger" id="clear">Borrar diario local</button></div><p class="muted small">Los registros se guardan solo en este navegador mediante almacenamiento local. Exporta una copia si quieres conservarlos.</p></section>
+<section class="panel"><h2>4. Revisión de datos</h2><p class="muted small">Checklist antes de plantear una operación. Si no puedes verificar los datos, no operes.</p>
+<div id="checks">
+<label><input type="checkbox"> He confirmado instrumento y mercado.</label><br><br>
+<label><input type="checkbox"> La cotización y su hora/fuente son actuales.</label><br><br>
+<label><input type="checkbox"> He considerado spread, comisiones y deslizamiento.</label><br><br>
+<label><input type="checkbox"> Tengo stop, motivo de salida y riesgo definido.</label><br><br>
+<label><input type="checkbox"> Estoy en una cuenta demo, no real.</label>
+</div><p class="muted small">Esta lista no valida automáticamente una estrategia ni convierte una hipótesis en señal.</p></section>
+</div>
+<section class="panel" style="margin-top:16px"><h2>Historial de operaciones cerradas</h2><div class="tablewrap"><table><thead><tr><th>Fecha</th><th>Instrumento</th><th>Dirección</th><th>Entrada</th><th>Salida</th><th>Unidades</th><th>Resultado neto</th></tr></thead><tbody id="history"><tr><td colspan="7" class="muted">Todavía no hay operaciones.</td></tr></tbody></table></div></section>
+<p class="muted small" style="margin-top:18px">Versión inicial utilizable: calculadora determinista y diario local. No es todavía una IA financiera experta, no incorpora noticias, fundamentales ni datos bursátiles en vivo. Esas funciones necesitan fuentes fiables, integración y pruebas antes de confiar en ellas.</p>
+</main>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id), num=id=>Number($(id).value);
+const fmt=n=>Number(n).toLocaleString('es-IE',{minimumFractionDigits:2,maximumFractionDigits:2});
+let last=null, trades=[];
+try{const saved=localStorage.getItem('ed2-paper-trades-v1');trades=saved?JSON.parse(saved):[];if(!Array.isArray(trades))trades=[];}catch{trades=[];}
+function calculate(){
+ const capital=num('capital'),risk=num('risk'),entry=num('entry'),stop=num('stop'),point=num('point'),fee=num('fee'),side=$('side').value;
+ if(![capital,risk,entry,stop,point,fee].every(Number.isFinite)||capital<=0||risk<=0||risk>100||entry<=0||stop<0||point<=0||fee<0){$('calcResult').textContent='Datos no válidos. Revisa capital, riesgo, entrada, stop, valor por punto y costes.';last=null;return;}
+ const distance=Math.abs(entry-stop);if(distance===0||((side==='long')&&(stop>=entry))||((side==='short')&&(stop<=entry))){$('calcResult').textContent='Stop inválido: debe estar por debajo de la entrada en largo y por encima en corto.';last=null;return;}
+ const budget=capital*risk/100,unitRisk=distance*point,qty=(budget-fee)/unitRisk;
+ if(!Number.isFinite(qty)||qty<=0){$('calcResult').textContent='Los costes estimados consumen todo el presupuesto de riesgo.';last=null;return;}
+ last={capital,risk,entry,stop,point,fee,side,symbol:$('symbol').value.trim().slice(0,30),budget,unitRisk,qty,estimatedRisk:qty*unitRisk+fee};
+ $('qty').value=String(qty);
+ $('calcResult').innerHTML='<div class="muted small">Tamaño teórico máximo (antes de redondear al lote permitido)</div><div class="big">'+fmt(qty)+' unidades</div><div class="stats"><div class="stat">Presupuesto de riesgo<b>'+fmt(budget)+' €</b></div><div class="stat">Riesgo por unidad<b>'+fmt(unitRisk)+' €</b></div><div class="stat">Riesgo estimado total<b>'+fmt(last.estimatedRisk)+' €</b></div><div class="stat">Porcentaje de capital<b>'+fmt(last.estimatedRisk/capital*100)+' %</b></div></div><p class="muted small">No incluye posibles gaps ni garantiza que el stop limite la pérdida. Comprueba tamaño mínimo, multiplicador y divisa del contrato en tu plataforma.</p>';
+}
+function render(){
+ $('nTrades').textContent=trades.length;const net=trades.reduce((s,t)=>s+t.pnl,0),wins=trades.filter(t=>t.pnl>0).length;
+ $('net').textContent=fmt(net)+' €';$('net').className=net>=0?'positive':'negative';$('wins').textContent=wins;$('winrate').textContent=trades.length?fmt(wins/trades.length*100)+' %':'—';
+ $('history').innerHTML=trades.length?trades.slice().reverse().map(t=>'<tr><td>'+escapeHtml(t.date)+'</td><td>'+escapeHtml(t.symbol||'—')+'</td><td>'+ (t.side==='long'?'Largo':'Corto')+'</td><td>'+fmt(t.entry)+'</td><td>'+fmt(t.exit)+'</td><td>'+fmt(t.qty)+'</td><td class="'+(t.pnl>=0?'positive':'negative')+'">'+fmt(t.pnl)+' €</td></tr>').join(''):'<tr><td colspan="7" class="muted">Todavía no hay operaciones.</td></tr>';
+}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+$('calc').addEventListener('click',calculate);
+$('saveTrade').addEventListener('click',()=>{
+ if(!last){$('saveMsg').textContent='Primero calcula y valida el riesgo.';return;}
+ const qty=num('qty'),exit=num('exit');if(!Number.isFinite(qty)||qty<=0||!Number.isFinite(exit)||exit<=0){$('saveMsg').textContent='Indica cantidad y precio de salida válidos.';return;}
+ const gross=(last.side==='long'?exit-last.entry:last.entry-exit)*qty*last.point,lastPnl=gross-last.fee;
+ const trade={date:new Date().toLocaleString('es-IE'),symbol:last.symbol,side:last.side,entry:last.entry,stop:last.stop,exit,qty,pnl:lastPnl,thesis:$('thesis').value.trim()};
+ trades.push(trade);try{localStorage.setItem('ed2-paper-trades-v1',JSON.stringify(trades));$('saveMsg').textContent='Operación demo guardada en este navegador. Resultado estimado: '+fmt(lastPnl)+' €.';}catch{$('saveMsg').textContent='No se pudo guardar en el navegador. Exporta los datos o libera espacio.';}
+ render();
+});
+$('export').addEventListener('click',()=>{if(!trades.length){$('saveMsg').textContent='No hay operaciones para exportar.';return;}const rows=[['fecha','instrumento','direccion','entrada','stop','salida','unidades','resultado_neto_eur','hipotesis'],...trades.map(t=>[t.date,t.symbol,t.side,t.entry,t.stop,t.exit,t.qty,t.pnl,t.thesis])];const csv=rows.map(r=>r.map(v=>'"'+String(v??'').replace(/"/g,'""')+'"').join(';')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}));a.download='ed2-diario-paper-trading.csv';a.click();URL.revokeObjectURL(a.href);});
+$('clear').addEventListener('click',()=>{if(!confirm('¿Borrar permanentemente el diario guardado en este navegador? Exporta primero si quieres conservarlo.'))return;trades=[];localStorage.removeItem('ed2-paper-trades-v1');render();$('saveMsg').textContent='Diario local borrado.';});
+render();
+})();
+</script></body></html>
