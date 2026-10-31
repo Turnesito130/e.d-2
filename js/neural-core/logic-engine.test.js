@@ -1,0 +1,16 @@
+import assert from "node:assert/strict";
+import { evaluateExpression, verifyNumericResult } from "./logic-engine.js";
+
+assert.equal(evaluateExpression("2 + 3 * 4").value, 14);
+assert.equal(evaluateExpression("(2 + 3) * 4").value, 20);
+assert.equal(evaluateExpression("18 / 3 - 2").value, 4);
+assert.equal(evaluateExpression("-3 + 5").value, 2);
+assert.equal(evaluateExpression("2 ^ 3").value, 8);
+assert.equal(verifyNumericResult("150 / 75", 2).ok, true);
+assert.equal(verifyNumericResult("150 / 75", 3).ok, false);
+assert.throws(() => evaluateExpression("1 / 0"), /División por cero/);
+assert.throws(() => evaluateExpression("2 + alert(1)"), /Carácter no permitido/);
+assert.throws(() => evaluateExpression("2 ** 3"), /Carácter no permitido/);
+assert.throws(() => evaluateExpression("2 ^ 99"), /Exponente demasiado grande/);
+assert.throws(() => evaluateExpression("1 + (2"), /Se esperaba/);
+console.log("logic-engine: todas las pruebas han pasado");
