@@ -1,11 +1,10 @@
-/* ev · Arranque: un toque en la esfera */
+/* E.D.-2 · Arranque local */
 let pendingShare = false, pendingQ = "";
 async function tap() {
   if (!started) {
     started = true; $("st").textContent = "te escucho"; startRec(); startMeter();
-    if (store.get("ed_brain") === "local") loadLocal().catch(e => showSub("Cerebro local: " + e.message));
-    speak(store.get("ed_k1") ? "Hola, soy E.D. Te escucho." : "Hola, soy E.D. Primero necesito tu clave de Gemini.");
-    if (!store.get("ed_k1")) openSet();
+    loadOwnBrain().then(b => showSub(b ? "Cerebro propio cargado." : "Modo local activo. El cerebro todavía necesita entrenamiento.")).catch(e => showSub(e.message));
+    speak("Hola, soy E.D. Funcionando en modo local. Te escucho.");
   } else if (pendingShare) {
     pendingShare = false; await shareScreen();
     if (stream) { if (pendingQ) { const q = pendingQ; pendingQ = ""; ask(q); } askFollow(); } else showSub("No se compartió la pantalla.");
