@@ -15,12 +15,13 @@ canvas{position:fixed;inset:0;width:100%;height:100%;cursor:pointer;outline:none
 #dock{position:fixed;right:16px;bottom:16px;display:flex;gap:8px;z-index:4}
 #dock button{width:38px;height:38px;border-radius:50%;background:rgba(20,12,4,.7);border:1px solid #4a3216;color:var(--amber);font-size:17px;line-height:1;cursor:pointer}
 #dock button:hover,#dock button:focus-visible{border-color:var(--amber);outline:none}
-#chat{display:none;position:fixed;right:16px;bottom:64px;width:min(360px,92vw);background:rgba(20,12,4,.96);border:1px solid #4a3216;border-radius:14px;padding:10px;z-index:4;flex-direction:column;gap:8px}
+#chat{display:none;position:fixed;left:50%;bottom:84px;transform:translateX(-50%);width:min(760px,calc(100vw - 36px));height:min(68vh,680px);max-height:calc(100dvh - 120px);background:rgba(12,10,8,.94);border:1px solid rgba(255,179,71,.34);border-radius:22px;padding:16px;z-index:7;flex-direction:column;gap:12px;box-shadow:0 22px 80px rgba(0,0,0,.58),0 0 36px rgba(255,150,40,.08);backdrop-filter:blur(22px);-webkit-backdrop-filter:blur(22px)}
 #chat.open{display:flex}
-#clog{overflow-y:auto;max-height:42vh;display:flex;flex-direction:column;gap:6px;font-size:.95rem}
-.cm{padding:7px 10px;border-radius:10px;white-space:pre-wrap;word-wrap:break-word;max-width:92%}
-.cm.u{align-self:flex-end;background:#3a2a14}
-.cm.e{align-self:flex-start;background:#120c05;border:1px solid #3a2a14}
+#chat::before{content:"Conversación";display:block;flex:0 0 auto;padding:2px 4px 12px;border-bottom:1px solid rgba(255,179,71,.16);font-size:.9rem;letter-spacing:.08em;color:var(--dim)}
+#clog{overflow-y:auto;flex:1;min-height:0;max-height:none;display:flex;flex-direction:column;gap:12px;padding:6px 8px 14px;scroll-behavior:smooth;overscroll-behavior:contain}
+.cm{padding:11px 15px;border-radius:16px;white-space:pre-wrap;overflow-wrap:anywhere;max-width:min(82%,620px);line-height:1.5;font-size:.98rem}
+.cm.u{align-self:flex-end;background:rgba(255,179,71,.16);border:1px solid rgba(255,179,71,.18);border-bottom-right-radius:5px}
+.cm.e{align-self:flex-start;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09);border-bottom-left-radius:5px}
 #cform{display:flex;gap:6px}
 #cin{flex:1;min-width:0;background:#0b0703;border:1px solid #4a3216;color:var(--bone);border-radius:8px;padding:8px;font:inherit}
 #cin:focus-visible,#cform button:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
@@ -32,3 +33,8 @@ canvas{position:fixed;inset:0;width:100%;height:100%;cursor:pointer;outline:none
 #gal span{position:absolute;left:0;right:0;bottom:0;padding:14px 8px 5px;font-size:.72rem;color:var(--bone);background:linear-gradient(transparent,rgba(5,3,2,.85))}
 #bImg{display:none}
 #bImg.on{display:block}
+@media(max-width:600px){
+  #chat{left:10px;right:10px;bottom:78px;transform:none;width:auto;height:min(66vh,620px);max-height:calc(100dvh - 105px);padding:12px;border-radius:18px}
+  .cm{max-width:92%;font-size:.94rem}
+  #clog{padding-inline:3px}
+}
