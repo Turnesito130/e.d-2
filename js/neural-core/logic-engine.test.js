@@ -14,7 +14,7 @@ assert.equal(verifyNumericResult("150 / 75", 2).ok, true);
 assert.equal(verifyNumericResult("150 / 75", 3).ok, false);
 assert.throws(() => evaluateExpression("1 / 0"), /División por cero/);
 assert.throws(() => evaluateExpression("2 + alert(1)"), /Carácter no permitido/);
-assert.throws(() => evaluateExpression("2 ** 3"), /Carácter no permitido/);
+assert.throws(() => evaluateExpression("2 ** 3"), /Se esperaba un número/);
 assert.throws(() => evaluateExpression("2 ^ 99"), /Exponente demasiado grande/);
 assert.throws(() => evaluateExpression("1 + (2"), /Se esperaba/);
 console.log("logic-engine: todas las pruebas han pasado");
