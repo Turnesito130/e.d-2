@@ -14,10 +14,30 @@ async function loadOwnBrain() {
     throw new Error("No pude cargar el cerebro propio: " + ownBrainError);
   }
 }
+let edAgentRuntimeModule = null;
+async function runAgentPlan(text, byText) {
+  try {
+    edAgentRuntimeModule ||= await import("./neural-core/agent-runtime.mjs");
+    const runtime = edAgentRuntimeModule.createAgentRuntime({ tools: {
+      calculate: async ({ expression }) => { const result = await calc(expression); return result === null ? "No pude interpretar el cálculo con seguridad." : result; },
+      note: async ({ text: note }) => { const notes = memList(); notes.push(note); memSave(notes); return "Nota guardada."; },
+      search: async ({ query }) => { openUrl("https://www.google.com/search?q=" + encodeURIComponent(query), "la búsqueda"); return "He preparado la búsqueda en Google."; },
+      open_url: async ({ url }) => { if (!/^https?:\/\//i.test(url)) throw new Error("Dirección no permitida."); openUrl(url, "la página solicitada"); return "He preparado la apertura de la página."; },
+      timer: async ({ seconds }) => { const value = Math.max(1, Math.min(86400, Number(seconds) || 0)); setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak("El temporizador ha terminado."); }, value * 1000); return "Temporizador iniciado durante " + value + " segundos."; }
+    } });
+    const plan = runtime.plan(text);
+    if (!plan.steps.length) return false;
+    const outcome = await runtime.execute(plan);
+    const answer = outcome.results.map(item => item.status === "completed" ? String(item.value) : item.message || "La acción no se ha ejecutado.").join(" ");
+    reply(text, answer || "No había ninguna acción compatible.", byText);
+    return true;
+  } catch (error) { console.error("E.D. Agent Runtime:", error); return false; }
+}
 async function ask(text, byText) {
   if (busy) return;
   viaText = !!byText;
   if (await commandHook(text, byText)) return;
+  if (await runAgentPlan(text, byText)) return;
   busy = true; stopVoice(); hideImages(); $("you").textContent = text; setState("think");
   if (byText) { addMsg("u", text); bub = addMsg("e", "Procesando localmente…"); $("chat").classList.add("open"); } else bub = null;
   try {
