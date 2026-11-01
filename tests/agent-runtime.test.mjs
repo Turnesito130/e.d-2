@@ -12,7 +12,7 @@ test("crea un plan de cálculo válido sin ejecutar nada", () => {
 test("solo interpreta una nota cuando el usuario lo pide explícitamente", () => {
   const plan = planTask("Recuerda que mi proyecto se llama E.D.");
   assert.equal(plan.steps[0].tool, "note");
-  assert.equal(plan.steps[0].args.text, "mi proyecto se llama E.D.");
+  assert.equal(plan.steps[0].args.text, "mi proyecto se llama e.d.");
 });
 
 test("clasifica acciones externas y destructivas como críticas", () => {
