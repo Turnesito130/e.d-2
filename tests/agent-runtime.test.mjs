@@ -41,3 +41,9 @@ test("rechaza planes manipulados con riesgo rebajado", async () => {
   const plan = { id: "p2", goal: "x", steps: [{ id: "s1", tool: "file_write", args: {}, risk: "low", description: "x" }] };
   await assert.rejects(() => runtime.execute(plan), /Plan no válido/);
 });
+
+test("planifica búsquedas en memoria sin convertirlas en notas", () => {
+  const plan = planTask("Qué recuerdas de mi proyecto");
+  assert.equal(plan.steps[0].tool, "memory_search");
+  assert.equal(plan.steps[0].risk, "low");
+});
