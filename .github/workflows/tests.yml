@@ -1,0 +1,15 @@
+name: E.D.-2 tests
+on:
+  push:
+    branches: ["arquitectura/cerebro-propio-0.1"]
+  pull_request:
+    branches: ["arquitectura/cerebro-propio-0.1"]
+jobs:
+  node-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node --test tests/*.test.mjs
