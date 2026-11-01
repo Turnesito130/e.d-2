@@ -1,27 +1,36 @@
-/* ev · Subtítulos, ajustes, imágenes y botones pequeños */
-/* ---------- Estado y textos ---------- */
+/* ev · Subtítulos, ajustes, imágenes y botones */
 const labels = { idle: "te escucho", listen: "escuchando", think: "pensando", speak: "hablando" };
 function setState(s) {
-  state = s; $("st").textContent = started ? labels[s] : $("st").textContent;
+  state = s;
+  $("st").textContent = started ? labels[s] : $("st").textContent;
   if (s === "speak") pauseRec(); else if (started) resumeRec();
 }
 function setSubs(o, t) {
-  [$("sub"), pip && pip.sub].forEach(e => { if (!e) return; e.style.opacity = o; if (t !== undefined) e.textContent = t; });
+  [ $("sub"), pip && pip.sub ].forEach(e => {
+    if (!e) return;
+    e.style.opacity = o;
+    if (t !== undefined) e.textContent = t;
+  });
 }
 function showSub(t, keep) {
   clearTimeout(fadeT); setSubs(1, t);
   if (!keep) fadeT = setTimeout(() => setSubs(0), 7000);
 }
 
-/* ---------- Ajustes ---------- */
-["k1", "mod", "lmod", "k2", "vid"].forEach(i => $(i).value = store.get("ed_" + i));
-$("brain").value = store.get("ed_brain") || "gemini";
-function openSet() { $("set").style.display = "block"; $("k1").focus(); }
+/* ---------- Ajustes sin Gemini ---------- */
+["k2", "vid"].forEach(i => { const el = $(i); if (el) el.value = store.get("ed_" + i); });
+function openSet() {
+  $("set").style.display = "block";
+  const first = $("k2");
+  if (first) first.focus();
+}
 $("save").onclick = () => {
-  ["k1", "mod", "lmod", "k2", "vid"].forEach(i => store.set("ed_" + i, $(i).value.trim()));
-  store.set("ed_brain", $("brain").value);
-  $("set").style.display = "none"; showSub("Listo, guardado.");
-  if ($("brain").value === "local") loadLocal().then(() => showSub("Cerebro local listo.")).catch(e => showSub("Cerebro local: " + e.message));
+  ["k2", "vid"].forEach(i => {
+    const el = $(i);
+    if (el) store.set("ed_" + i, el.value.trim());
+  });
+  $("set").style.display = "none";
+  showSub("Listo, guardado.");
 };
 
 /* ---------- Imágenes ---------- */
@@ -47,14 +56,21 @@ async function showImages(q) {
 }
 $("bImg").onclick = hideImages;
 
-/* ---------- Botones pequeños ---------- */
+/* ---------- Botones ---------- */
 function addMsg(cls, t) {
   const d = document.createElement("div"); d.className = "cm " + cls; d.textContent = t;
   $("clog").appendChild(d); $("clog").scrollTop = 1e9; return d;
 }
-$("bCfg").onclick = () => { if ($("set").style.display === "block") $("set").style.display = "none"; else openSet(); };
-$("bTxt").onclick = () => { const c = $("chat"); c.classList.toggle("open"); if (c.classList.contains("open")) $("cin").focus(); };
+$("bCfg").onclick = () => {
+  if ($("set").style.display === "block") $("set").style.display = "none";
+  else openSet();
+};
+$("bTxt").onclick = () => {
+  const c = $("chat"); c.classList.toggle("open");
+  if (c.classList.contains("open")) $("cin").focus();
+};
 $("cform").onsubmit = e => {
   e.preventDefault(); const v = $("cin").value.trim();
-  if (!v || busy) return; $("cin").value = ""; ask(v, true);
+  if (!v || busy) return;
+  $("cin").value = ""; ask(v, true);
 };
