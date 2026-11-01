@@ -21,7 +21,7 @@ export function classifyRisk(tool) {
   const name = String(tool || "").toLowerCase();
   if (/delete|remove|erase|format|shutdown|kill|attack|weapon|transfer|purchase|send_message|publish|install|execute_shell|admin/.test(name)) return RISK.CRITICAL;
   if (/email|message|post|share|upload|download|camera|microphone|location|device_setting|file_move|file_write/.test(name)) return RISK.HIGH;
-  if (/open_url|search|timer|calculate|read|list|note|study/.test(name)) return RISK.LOW;
+  if (/open_url|search|timer|calculate|read|list|note|study|memory_search/.test(name)) return RISK.LOW;
   return RISK.MEDIUM;
 }
 
