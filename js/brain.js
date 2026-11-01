@@ -1,12 +1,12 @@
 /* E.D.-2 · Motor local propio. No usa APIs ni modelos externos. */
-let ownBrain = null, ownBrainReady = false, ownBrainError = "";
+let ownBrain = null, ownBrainApi = null, ownBrainReady = false, ownBrainError = "";
 async function loadOwnBrain() {
   if (ownBrainReady) return ownBrain;
   const raw = store.get("ed_brain_bundle");
   if (!raw) { ownBrainReady = true; return null; }
   try {
-    const api = await import("./neural-core/index.js");
-    ownBrain = api.importBrain(raw);
+    ownBrainApi = await import("./neural-core/index.js");
+    ownBrain = ownBrainApi.importBrain(raw);
     ownBrainReady = true;
     return ownBrain;
   } catch (e) {
@@ -26,7 +26,7 @@ async function ask(text, byText) {
     if (!brain) {
       answer = "Todavía no tengo un cerebro entrenado con el que pueda responder libremente. No voy a fingir que sé hacerlo. Puedo ejecutar mis funciones locales, guardar notas y seguir entrenando mi cerebro propio.";
     } else {
-      answer = apiGenerate(text, brain);
+      answer = ownBrainApi.generateText(brain, text, { maxTokens: 120, temperature: 0.7 });
       if (!answer || !answer.trim()) answer = "No he aprendido todavía a responder a eso. Necesito más entrenamiento.";
     }
     if (bub) bub.textContent = answer;
