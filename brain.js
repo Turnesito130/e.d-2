@@ -1,4 +1,4 @@
-/* ev · Motor local. No utiliza Gemini ni APIs de IA externas. */
+/* ev · Motor de respuesta local. */
 let llm = null, llmLoading = null;
 async function loadLocal() {
   if (llm) return llm;
