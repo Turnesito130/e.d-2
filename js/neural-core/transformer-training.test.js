@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { TransformerDecoder } from "./transformer.js";
-import { crossEntropy, crossEntropyGradient, outputHeadGradients, trainTransformerHead, evaluateTransformer, createTransformerCheckpoint } from "./transformer-training.js";
+import { crossEntropy, crossEntropyGradient, outputHeadGradients, trainTransformer, evaluateTransformer, createTransformerCheckpoint } from "./transformer-training.js";
 
 function testCrossEntropyGradient() {
   const logits=[0.2,-0.4,1.1], target=2, analytic=crossEntropyGradient(logits,target), eps=1e-5;
@@ -15,7 +15,6 @@ function testHeadGradient() {
   assert.equal(g.dW.length,2);assert.equal(g.dW[0].length,3);
   assert.ok(Number.isFinite(g.loss));
 }
-
 function testOutputHeadFiniteDifference() {
   const features=[0.3,-0.2,0.7], weights=[[0.1,-0.2,0.4],[0.3,0.2,-0.1],[-0.4,0.5,0.2]];
   const target=1, eps=1e-5;
@@ -33,20 +32,24 @@ function testOutputHeadFiniteDifference() {
       `gradiente de lmHead incorrecto en [${i},${j}]: ${numeric} vs ${analytic.dW[i][j]}`);
   }
 }
-
-async function testTraining() {
+async function testFullTransformerTraining() {
   const model=new TransformerDecoder({vocabSize:8,dModel:8,heads:2,layers:1,maxSeqLen:8,seed:4});
   const ids=[1,2,3,1,2,3,1,2,3,1,2,3];
   const bodyBefore=JSON.stringify({embedding:model.embedding,blocks:model.blocks,position:model.position});
+  const headBefore=JSON.stringify(model.lmHead);
   const before=evaluateTransformer(model,ids).loss;
-  const result=await trainTransformerHead(model,ids,{epochs:5,learningRate:0.03,batchSize:4});
+  const result=await trainTransformer(model,ids,{epochs:5,learningRate:0.03,batchSize:4});
   const after=evaluateTransformer(model,ids).loss;
-  assert.ok(result.steps>0);assert.equal(result.bodyFrozen,true);
-  assert.equal(JSON.stringify({embedding:model.embedding,blocks:model.blocks,position:model.position}),bodyBefore);
-  assert.ok(after<before,"la pérdida de entrenamiento de la cabeza debe bajar");
+  assert.ok(result.steps>0);
+  assert.equal(result.bodyFrozen,false);
+  assert.equal(result.trainedParameters,"Transformer completo");
+  assert.notEqual(JSON.stringify({embedding:model.embedding,blocks:model.blocks,position:model.position}),bodyBefore,
+    "el cuerpo del Transformer debe recibir actualizaciones");
+  assert.notEqual(JSON.stringify(model.lmHead),headBefore,"lmHead debe recibir actualizaciones");
+  assert.ok(after<before,`la pérdida debe bajar: antes=${before}, después=${after}`);
   assert.equal(createTransformerCheckpoint(model).format,"ed2-transformer-checkpoint");
   assert.throws(()=>evaluateTransformer(model,[1,2,99]),/Corpus tokenizado/);
-  await assert.rejects(()=>trainTransformerHead(model,[1,2,99]),/Corpus tokenizado/);
+  await assert.rejects(()=>trainTransformer(model,[1,2,99]),/Corpus tokenizado/);
 }
-testCrossEntropyGradient();testHeadGradient();testOutputHeadFiniteDifference();await testTraining();
+testCrossEntropyGradient();testHeadGradient();testOutputHeadFiniteDifference();await testFullTransformerTraining();
 console.log("Transformer full backprop training: pruebas superadas.");
