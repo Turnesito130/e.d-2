@@ -34,6 +34,9 @@ export function planTask(input) {
   let match = q.match(/(?:cuanto es|calcula|calcular|resuelve)\s+(.+)/);
   if (match) add("calculate", { expression: match[1].replace(/[?¿]/g, "").trim() }, "Calcular la expresión solicitada");
 
+  match = q.match(/^(?:que recuerdas de|que sabes de|busca en mi memoria)\\s+(.+)/);
+  if (match) add("memory_search", { query: match[1].trim() }, "Consultar recuerdos relevantes");
+
   match = q.match(/^(?:anota|apunta|recuerda|memoriza)(?: que)?\s+(.+)/);
   if (match) add("note", { text: match[1].trim() }, "Guardar la nota solicitada expresamente");
 
