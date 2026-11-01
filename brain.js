@@ -68,7 +68,7 @@ async function ask(text, byText) {
       showSub("No recibí respuesta."); setState("idle");
     }
     history.push({ role: "user", parts: [{ text }] }, { role: "model", parts: [{ text: vis }] });
-    history = history.slice(-20);
+    history = history.slice(-20); saveChatHistory();
     showSub(vis);
     const mk = full.match(/\\[\\[\\s*im[aá]genes?\\s*:\\s*([^\\]]+)\\]\\]/i);
     if (mk) showImages(mk[1]);
