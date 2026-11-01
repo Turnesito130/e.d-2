@@ -47,7 +47,8 @@ function apiGenerate(text, brain) {
 }
 async function trainOwnBrain(text, options = {}) {
   if (typeof text !== "string" || text.trim().length < 20) throw new Error("Necesito al menos 20 caracteres de texto para entrenar.");
-  const api = await import("./neural-core/index.js");
+  ownBrainApi = await import("./neural-core/index.js");
+  const api = ownBrainApi;
   if (!ownBrain) ownBrain = api.createBrain({ text, contextSize: 8, hiddenSize: 48, tokenizerType: "char" });
   const result = await api.trainBrain(ownBrain, text, options);
   store.set("ed_brain_bundle", api.exportBrain(ownBrain));
