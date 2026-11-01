@@ -14,13 +14,13 @@ async function loadOwnBrain() {
     throw new Error("No pude cargar el cerebro propio: " + ownBrainError);
   }
 }
-let edAgentRuntimeModule = null;
+let edAgentRuntimeModule = null;\nlet edMemoryStorePromise = null;\nasync function getStructuredMemory() {\n  edMemoryStorePromise ||= import("./neural-core/memory-store.mjs").then(({ createMemoryStore }) => createMemoryStore());\n  return edMemoryStorePromise;\n}
 async function runAgentPlan(text, byText) {
   try {
     edAgentRuntimeModule ||= await import("./neural-core/agent-runtime.mjs");
     const runtime = edAgentRuntimeModule.createAgentRuntime({ tools: {
       calculate: async ({ expression }) => { const result = await calc(expression); return result === null ? "No pude interpretar el cálculo con seguridad." : result; },
-      note: async ({ text: note }) => { const notes = memList(); notes.push(note); memSave(notes); return "Nota guardada."; },
+      note: async ({ text: note }) => { const memory = await getStructuredMemory(); memory.remember({ content: note, type: "note", source: "user_explicit", confidence: 0.95, consent: true }); return "He guardado esa nota en la memoria estructurada."; },\n      memory_search: async ({ query }) => { const memory = await getStructuredMemory(); const found = memory.search(query, { limit: 5, includeUncertain: true }); return found.length ? found.map(item => item.content + " (tipo: " + item.type + ", confianza: " + Math.round(item.confidence * 100) + "%)").join("\\n") : "No he encontrado recuerdos relacionados."; },
       search: async ({ query }) => { openUrl("https://www.google.com/search?q=" + encodeURIComponent(query), "la búsqueda"); return "He preparado la búsqueda en Google."; },
       open_url: async ({ url }) => { if (!/^https?:\/\//i.test(url)) throw new Error("Dirección no permitida."); openUrl(url, "la página solicitada"); return "He preparado la apertura de la página."; },
       timer: async ({ seconds }) => { const value = Math.max(1, Math.min(86400, Number(seconds) || 0)); setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak("El temporizador ha terminado."); }, value * 1000); return "Temporizador iniciado durante " + value + " segundos."; }
