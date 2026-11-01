@@ -1,5 +1,26 @@
-/* ev · Arranque: un toque en la esfera */
+/* ev · Arranque y controles principales */
 let pendingShare = false, pendingQ = "";
+function toggleSettings() {
+  const panel = $("set");
+  if (!panel) return;
+  panel.style.display = panel.style.display === "block" ? "none" : "block";
+  if (panel.style.display === "block") {
+    const first = $("k2"); if (first) first.focus();
+  }
+}
+function toggleChat() {
+  const panel = $("chat");
+  if (!panel) return;
+  panel.classList.toggle("open");
+  if (panel.classList.contains("open") && $("cin")) $("cin").focus();
+}
+function bindControls() {
+  const cfg = $("bCfg"), txt = $("bTxt");
+  if (cfg) cfg.onclick = toggleSettings;
+  if (txt) txt.onclick = toggleChat;
+}
+bindControls();
+
 async function tap() {
   if (!started) {
     started = true;
