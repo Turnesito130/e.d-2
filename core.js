@@ -8,4 +8,10 @@ const store = {
   get: k => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } },
   set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} }
 };
-let history = [], stream = null, started = false, busy = false, token = 0, state = "idle", activeUntil = 0, fadeT = null, pip = null, viaText = false, bub = null;
+let history = [];
+try {
+  const saved = JSON.parse(store.get("ed_chat_history") || "[]");
+  if (Array.isArray(saved)) history = saved.filter(x => x && (x.role === "user" || x.role === "model") && Array.isArray(x.parts) && x.parts[0] && typeof x.parts[0].text === "string").slice(-20);
+} catch (e) { history = []; }
+function saveChatHistory() { store.set("ed_chat_history", JSON.stringify(history.slice(-20))); }
+let stream = null, started = false, busy = false, token = 0, state = "idle", activeUntil = 0, fadeT = null, pip = null, viaText = false, bub = null;
