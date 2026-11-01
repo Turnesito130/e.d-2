@@ -46,3 +46,43 @@ $("save").before(cb);
     location.reload();
   } catch (e) {}
 })();
+
+
+/* Memoria local-first: exportar e importar copias entre dispositivos. */
+(function addMemoryBackupControls() {
+  const panel = $("set");
+  if (!panel || panel.querySelector("#edBackupExport")) return;
+  const heading = document.createElement("h3");
+  heading.textContent = "Memoria y copias";
+  heading.style.marginTop = "22px";
+  const note = document.createElement("p");
+  note.textContent = "La memoria vive en este navegador. Para pasarla a otro dispositivo, exporta una copia e impórtala allí. Las claves y ajustes no se incluyen.";
+  note.style.fontSize = "13px";
+  const exportButton = document.createElement("button");
+  exportButton.id = "edBackupExport";
+  exportButton.type = "button";
+  exportButton.className = "sbtn";
+  exportButton.textContent = "Exportar memoria";
+  exportButton.onclick = () => {
+    const count = exportMemoryBackup();
+    showSub("Copia creada: " + count + " recuerdos. Guárdala en un lugar privado.");
+  };
+  const importButton = document.createElement("button");
+  importButton.type = "button";
+  importButton.className = "sbtn";
+  importButton.textContent = "Importar memoria";
+  const file = document.createElement("input");
+  file.type = "file";
+  file.accept = "application/json,.json";
+  file.hidden = true;
+  file.onchange = async () => {
+    try {
+      const result = await importMemoryBackup(file.files && file.files[0]);
+      showSub("Memoria importada. " + result.total + " recuerdos en este navegador.");
+    } catch (e) {
+      showSub("No se pudo importar: " + e.message);
+    } finally { file.value = ""; }
+  };
+  importButton.onclick = () => file.click();
+  panel.append(heading, note, exportButton, importButton, file);
+})();
