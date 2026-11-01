@@ -27,10 +27,10 @@ function diagnostico() {
     o(!!SR, "reconocimiento de voz", "sin reconocimiento de voz"),
     o("documentPictureInPicture" in window, "ventana flotante", "sin ventana flotante"),
     o(!!stream, "pantalla compartida", "pantalla sin compartir"),
-    o(!!store.get("ed_k1"), "clave de Gemini guardada", "falta la clave de Gemini"),
+    o(typeof loadLocal === "function", "motor local disponible", "motor local no disponible"),
     o(!!(store.get("ed_k2") && store.get("ed_vid")), "voz de ElevenLabs lista", "usa la voz del navegador"),
-    o(!!llm, "cerebro local cargado", "cerebro local sin cargar"),
-    o(typeof gtoken !== "undefined" && !!gtoken, "Google conectado", "Google sin conectar")
+    o(!!llm, "modelo local cargado", "modelo local todavía no cargado"),
+    o(typeof gtoken !== "undefined" && !!gtoken, "Google conectado (opcional)", "Google sin conectar (opcional)")
   ].join("\n");
 }
 async function commandHook(text, byText) {
