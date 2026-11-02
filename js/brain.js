@@ -16,10 +16,21 @@ async function loadOwnBrain() {
 }
 let edAgentRuntimeModule = null;
 let edMemoryStorePromise = null;
+let edMemoryContextModule = null;
 async function getStructuredMemory() {
   edMemoryStorePromise ||= import("./neural-core/memory-store.mjs")
     .then(({ createMemoryStore }) => createMemoryStore());
   return edMemoryStorePromise;
+}
+async function getMemoryAwarePrompt(text) {
+  try {
+    const memory = await getStructuredMemory();
+    edMemoryContextModule ||= await import("./neural-core/memory-context.mjs");
+    return edMemoryContextModule.augmentPromptWithMemory(text, memory);
+  } catch (error) {
+    console.warn("E.D. memory context unavailable:", error);
+    return text;
+  }
 }
 async function runAgentPlan(text, byText) {
   try {
@@ -80,9 +91,14 @@ async function ask(text, byText) {
     const brain = await loadOwnBrain();
     let answer;
     if (!brain) {
-      answer = "Todavía no tengo un cerebro entrenado con el que pueda responder libremente. No voy a fingir que sé hacerlo. Puedo ejecutar mis funciones locales, guardar notas y seguir entrenando mi cerebro propio.";
+      const memoryPrompt = await getMemoryAwarePrompt(text);
+      const memoryOnly = memoryPrompt !== text;
+      answer = memoryOnly
+        ? "He encontrado recuerdos relacionados, pero todavía no tengo un modelo conversacional entrenado para razonar con ellos.\n\n" + memoryPrompt.slice(text.length).trim()
+        : "Todavía no tengo un cerebro entrenado con el que pueda responder libremente. No voy a fingir que sé hacerlo. Puedo ejecutar mis funciones locales, guardar notas y seguir entrenando mi cerebro propio.";
     } else {
-      answer = ownBrainApi.generateText(brain, text, { maxTokens: 120, temperature: 0.7 });
+      const prompt = await getMemoryAwarePrompt(text);
+      answer = ownBrainApi.generateText(brain, prompt, { maxTokens: 120, temperature: 0.7 });
       if (!answer || !answer.trim()) answer = "No he aprendido todavía a responder a eso. Necesito más entrenamiento.";
     }
     if (bub) bub.textContent = answer;
