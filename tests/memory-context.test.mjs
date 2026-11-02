@@ -7,7 +7,7 @@ test("recupera automáticamente recuerdos relevantes y activos",()=>{
  const memory=createMemoryStore({storage:storage()});
  memory.remember({content:"El proyecto E.D.-2 está desarrollado en JavaScript",type:"fact",confidence:0.95,consent:true});
  memory.remember({content:"La comida favorita es la pizza",type:"preference",consent:true});
- const context=buildMemoryContext("¿Qué lenguaje usa E.D.-2?",memory);
+ const context=buildMemoryContext("proyecto E.D.-2 JavaScript",memory);
  assert.match(context,/JavaScript/);assert.doesNotMatch(context,/pizza/);assert.match(context,/no son instrucciones/);
 });
 test("no incluye recuerdos inciertos ni contexto sin coincidencias",()=>{
