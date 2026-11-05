@@ -1,55 +1,10 @@
-// E.D.-2 · Interfaz común del cerebro local. No incorpora proveedores remotos.
-export function createLocalBrainProvider({ loadModule = () => import("./local-llm.mjs") } = {}) {
-  if (typeof loadModule !== "function") throw new TypeError("loadModule debe ser una función");
-
-  let modulePromise = null;
-  let engine = null;
-  let loadingPromise = null;
-
-  async function getEngineModule() {
-    modulePromise ||= Promise.resolve().then(loadModule);
-    const module = await modulePromise;
-    if (!module || typeof module.checkLocalModelSupport !== "function" ||
-        typeof module.loadLocalModel !== "function" ||
-        typeof module.generateLocalResponse !== "function") {
-      throw new TypeError("El motor local no implementa la interfaz requerida");
-    }
-    return module;
-  }
-
-  return Object.freeze({
-    id: "local-webllm",
-    get ready() { return Boolean(engine); },
-
-    async checkSupport() {
-      const module = await getEngineModule();
-      return module.checkLocalModelSupport();
-    },
-
-    async load(onProgress = () => {}) {
-      if (engine) return true;
-      if (loadingPromise) return loadingPromise;
-      loadingPromise = (async () => {
-        const module = await getEngineModule();
-        const support = await module.checkLocalModelSupport();
-        if (!support?.supported) throw new Error(support?.reason || "Este dispositivo no es compatible con el motor local");
-        await module.loadLocalModel(onProgress);
-        engine = module;
-        return true;
-      })();
-      try {
-        return await loadingPromise;
-      } finally {
-        loadingPromise = null;
-      }
-    },
-
-    async generate(messages, options = {}) {
-      if (!engine) throw new Error("El cerebro local todavía no está preparado");
-      if (!Array.isArray(messages) || messages.length === 0) {
-        throw new TypeError("Se necesita una conversación válida");
-      }
-      return engine.generateLocalResponse(messages, options);
-    }
-  });
+import { createNativeCognition } from "./native-cognition.mjs";
+export function createLocalBrainProvider({cognition=null}={}){
+ const brain=cognition||createNativeCognition();let ready=false,loading=null;
+ return Object.freeze({id:"ed-native-cognition",get ready(){return ready},
+ async checkSupport(){return {supported:true,reason:"Funciona en JavaScript estándar; no requiere WebGPU."}},
+ async load(onProgress=()=>{}){if(ready)return true;if(loading)return loading;loading=Promise.resolve().then(async()=>{onProgress({text:"Preparando el cerebro cognitivo propio…",progress:.5});await brain.load();ready=true;onProgress({text:"Cerebro propio activado en este dispositivo.",progress:1});return true});try{return await loading}finally{loading=null}},
+ async generate(ms){if(!ready)throw new Error("El cerebro propio todavía no está activado.");if(!Array.isArray(ms)||!ms.length)throw new TypeError("Se necesita una conversación válida.");return brain.generate(ms)},
+ learn:(...a)=>brain.learn(...a),recall:(...a)=>brain.recall(...a)
+ });
 }

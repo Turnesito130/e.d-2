@@ -1,4 +1,4 @@
-/* E.D.-2 · Cerebro conversacional local con WebGPU + memoria propia. */
+/* E.D.-2 · Cerebro cognitivo propio: reglas, memoria y conocimiento local. */
 let edBrainProvider = null;
 let edBrainProviderPromise = null;
 let edLocalModelReady = false;
@@ -67,7 +67,7 @@ async function loadEDLocalModel() {
   edLocalModelLoading = true;
   const button = document.getElementById("edLoadModel");
   if (button) button.disabled = true;
-  setLocalModelStatus("Comprobando compatibilidad WebGPU…", 0);
+  setLocalModelStatus("Preparando el núcleo cognitivo propio…", 0);
   try {
     const provider = await getEDBrainProvider();
     const support = await provider.checkSupport();
@@ -77,8 +77,8 @@ async function loadEDLocalModel() {
     });
     edLocalModelReady = provider.ready;
     edLocalModelError = "";
-    setLocalModelStatus("Cerebro local preparado. Los mensajes se procesan en este dispositivo.", 1);
-    if (button) button.textContent = "Cerebro local preparado";
+    setLocalModelStatus("Cerebro propio activado. No se ha cargado ningún modelo externo.", 1);
+    if (button) button.textContent = "Cerebro propio activado";
     return true;
   } catch (error) {
     edLocalModelError = error?.message || String(error);
@@ -99,7 +99,7 @@ function setupEDLocalModelControls() {
   if (!settings || document.getElementById("edModelPanel")) return;
   const panel = document.createElement("section");
   panel.id = "edModelPanel";
-  panel.innerHTML = '<h3>Cerebro local avanzado</h3><p>Modelo: Qwen2.5 1.5B Instruct · WebGPU · ejecución local. Primera descarga aproximada: 1,6 GB. Necesita conexión para descargarlo y un navegador compatible.</p><button id="edLoadModel" type="button">Descargar y preparar cerebro local</button><p id="edModelStatus" role="status">Todavía no está cargado. No se descargará nada hasta que pulses el botón.</p><div id="edModelProgress" aria-label="Progreso de descarga"><div id="edModelProgressFill"></div></div>';
+  panel.innerHTML = '<h3>Cerebro propio de E.D.</h3><p>Núcleo cognitivo nativo: razonamiento lógico, cálculo verificable, memoria y aprendizaje local supervisado. No utiliza Qwen, modelos externos ni APIs de IA. Esta primera versión tiene comprensión lingüística limitada y se ampliará progresivamente.</p><button id="edLoadModel" type="button">Activar cerebro propio</button><p id="edModelStatus" role="status">El núcleo propio está preparado para activarse. No requiere descargas.</p><div id="edModelProgress" aria-label="Estado del cerebro"><div id="edModelProgressFill"></div></div>';
   settings.appendChild(panel);
   document.getElementById("edLoadModel").addEventListener("click", loadEDLocalModel);
 }
@@ -176,7 +176,7 @@ async function ask(text, byText) {
   if (byText) { addMsg("u", text); bub = addMsg("e", "Preparando respuesta local…"); $("chat").classList.add("open"); } else bub = null;
   try {
     if (!edLocalModelReady || !edBrainProvider?.ready) {
-      const answer = "Mi modelo de lenguaje avanzado todavía no está cargado. Abre Ajustes y pulsa «Descargar y preparar cerebro local». La primera descarga ocupa aproximadamente 1,6 GB. No se descargará nada hasta que tú lo autorices.";
+      const answer = "Mi cerebro propio todavía no está activado. Abre Ajustes y pulsa «Activar cerebro propio». No necesitas descargar ningún modelo.";
       if (bub) bub.textContent = answer;
       showSub(answer);
       return;
@@ -201,7 +201,7 @@ async function ask(text, byText) {
     }
     messages.push({ role: "user", content: text });
     const provider = await getEDBrainProvider();
-    const answer = await provider.generate(messages, { maxTokens: 384, temperature: 0.65 });
+    const answer = await provider.generate(messages);
     if (!answer) throw new Error("El modelo no generó una respuesta.");
     if (bub) bub.textContent = answer;
     showSub(answer);
