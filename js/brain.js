@@ -1,5 +1,6 @@
 /* E.D.-2 · Cerebro conversacional local con WebGPU + memoria propia. */
-let edLocalModelModule = null;
+let edBrainProvider = null;
+let edBrainProviderPromise = null;
 let edLocalModelReady = false;
 let edLocalModelLoading = false;
 let edLocalModelError = "";
@@ -54,6 +55,12 @@ function setLocalModelStatus(message, progress) {
   if (status) status.textContent = message;
   if (fill && Number.isFinite(progress)) fill.style.width = Math.max(0, Math.min(100, progress * 100)) + "%";
 }
+async function getEDBrainProvider() {
+  edBrainProviderPromise ||= import("./neural-core/brain-provider.mjs").then(({ createLocalBrainProvider }) => createLocalBrainProvider());
+  edBrainProvider = await edBrainProviderPromise;
+  return edBrainProvider;
+}
+
 async function loadEDLocalModel() {
   if (edLocalModelReady) return true;
   if (edLocalModelLoading) return false;
@@ -62,13 +69,13 @@ async function loadEDLocalModel() {
   if (button) button.disabled = true;
   setLocalModelStatus("Comprobando compatibilidad WebGPU…", 0);
   try {
-    edLocalModelModule ||= await import("./neural-core/local-llm.mjs");
-    const support = await edLocalModelModule.checkLocalModelSupport();
+    const provider = await getEDBrainProvider();
+    const support = await provider.checkSupport();
     if (!support.supported) throw new Error(support.reason);
-    await edLocalModelModule.loadLocalModel(report => {
+    await provider.load(report => {
       setLocalModelStatus(report.text + (report.progress ? " · " + Math.round(report.progress * 100) + "%" : ""), report.progress);
     });
-    edLocalModelReady = true;
+    edLocalModelReady = provider.ready;
     edLocalModelError = "";
     setLocalModelStatus("Cerebro local preparado. Los mensajes se procesan en este dispositivo.", 1);
     if (button) button.textContent = "Cerebro local preparado";
@@ -168,7 +175,7 @@ async function ask(text, byText) {
   busy = true; stopVoice(); hideImages(); $("you").textContent = text; setState("think");
   if (byText) { addMsg("u", text); bub = addMsg("e", "Preparando respuesta local…"); $("chat").classList.add("open"); } else bub = null;
   try {
-    if (!edLocalModelReady || !edLocalModelModule) {
+    if (!edLocalModelReady || !edBrainProvider?.ready) {
       const answer = "Mi modelo de lenguaje avanzado todavía no está cargado. Abre Ajustes y pulsa «Descargar y preparar cerebro local». La primera descarga ocupa aproximadamente 1,6 GB. No se descargará nada hasta que tú lo autorices.";
       if (bub) bub.textContent = answer;
       showSub(answer);
@@ -193,7 +200,8 @@ async function ask(text, byText) {
       if (role && content) messages.push({ role, content });
     }
     messages.push({ role: "user", content: text });
-    const answer = await edLocalModelModule.generateLocalResponse(messages, { maxTokens: 384, temperature: 0.65 });
+    const provider = await getEDBrainProvider();
+    const answer = await provider.generate(messages, { maxTokens: 384, temperature: 0.65 });
     if (!answer) throw new Error("El modelo no generó una respuesta.");
     if (bub) bub.textContent = answer;
     showSub(answer);
