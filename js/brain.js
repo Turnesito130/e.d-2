@@ -152,13 +152,15 @@ async function ask(text, byText) {
   viaText = !!byText;
   const tutorCommand = String(text || "").trim().toLocaleLowerCase("es");
   if (/^(activa|activar|enciende|pon|inicia) (el )?(modo )?(profesor|tutor)$/.test(tutorCommand) || /^(modo )?(profesor|tutor)$/.test(tutorCommand)) {
-    setEDTutorMode(true);
-    reply(text, "Modo profesor activado. Te explicaré paso a paso y comprobaré los cálculos.", byText);
+    const message = setEDTutorMode(true);
+    if (byText) { addMsg("u", text); addMsg("e", message); $("chat").classList.add("open"); }
+    speak(message);
     return;
   }
   if (/^(desactiva|desactivar|apaga|quita|salir del) (el )?(modo )?(profesor|tutor)$/.test(tutorCommand)) {
-    setEDTutorMode(false);
-    reply(text, "Modo profesor desactivado.", byText);
+    const message = setEDTutorMode(false);
+    if (byText) { addMsg("u", text); addMsg("e", message); $("chat").classList.add("open"); }
+    speak(message);
     return;
   }
   if (await commandHook(text, byText)) return;

@@ -7,4 +7,4 @@ function pickVoice() {
   return v[0];
 }
 const speakBase = speak;
-speak = raw => speakBase(raw.replace(/\bev\b/gi, "Eve"));
+speak = raw => speakBase(raw);
