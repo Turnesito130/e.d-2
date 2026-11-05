@@ -35,6 +35,14 @@ function jarvis(c, w, h, d, t, fx, fy, R) {
   c.save(); c.shadowColor = rgb(.9); c.shadowBlur = 8 + e * 14; c.fillStyle = "#e8fbff"; c.textAlign = "center"; c.textBaseline = "middle";
   c.font = "600 " + Math.round(R * .2) + "px 'Exo 2','Segoe UI',sans-serif"; c.fillText("E.D", cx, cy); c.restore();
 }
+function loopMain(t) {
+  step(t);
+  const m = Math.min(W, H * 1.2) * .27, o = m * .32;
+  const tk = imgMode ? .32 : 1, tx = imgMode ? 1 - (o + 24) / W : .5, ty = imgMode ? (o + 56) / H : .42;
+  Lk += (tk - Lk) * .08; Lx += (tx - Lx) * .08; Ly += (ty - Ly) * .08;
+  jarvis(ctx, W, H, dpr, t, Lx, Ly, m * Lk);
+  requestAnimationFrame(loopMain);
+}
 async function openPip() {
   if (pip) { pip.win.close(); return; }
   if (!("documentPictureInPicture" in window)) { showSub("Tu Chrome no permite la ventana flotante."); return; }
