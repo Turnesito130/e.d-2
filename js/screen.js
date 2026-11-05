@@ -20,7 +20,8 @@ async function frame() {
   c.getContext("2d").drawImage(src, 0, 0, c.width, c.height);
   return c.toDataURL("image/jpeg", .6).split(",")[1];
 }
-const wantsScreen = /pantalla|mira|ves |ver |esto|aqu[ií]|d[oó]nde|pulso|clic|click|error|ayuda|leer?|dice/i;
+/* Solo marca peticiones explícitas de inspección visual. El cerebro actual es texto; no se debe fingir que analiza capturas. */
+const wantsScreen = /(?:mira|lee|describe|analiza|interpreta|que aparece|que pone|que ves).{0,45}(?:pantalla|captura|imagen|ventana|documento|pagina)|(?:pantalla|captura|imagen|ventana|documento|pagina).{0,45}(?:mira|lee|describe|analiza|interpreta|que pone|que aparece)/i;
 
 /* ---------- Ventana flotante ---------- */
 async function openPip() {
