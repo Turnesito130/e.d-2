@@ -1,3 +1,5 @@
+> **Documento histórico:** describe una fase anterior en la que se contemplaba un modelo externo. La arquitectura vigente del chat está documentada en `docs/NUCLEO-COGNITIVO-PROPIO-0.1.md`: E.D. ya no carga Qwen ni depende de APIs externas de IA. Este documento se conserva como registro histórico, no como especificación actual.
+
 # E.D.-2 · Arquitectura híbrida: 12 líneas de mejora
 
 El cerebro neuronal interpreta lenguaje y propone respuestas. Los módulos deterministas verifican aquello que pueden comprobar. Un coordinador decide qué comprobaciones aplicar. La respuesta distingue entre verificado, inferido y no verificado; ningún verificador certifica afirmaciones fuera de su ámbito.

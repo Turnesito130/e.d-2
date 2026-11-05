@@ -1,3 +1,5 @@
+> **Documento histórico:** describe una fase anterior en la que se contemplaba un modelo externo. La arquitectura vigente del chat está documentada en `docs/NUCLEO-COGNITIVO-PROPIO-0.1.md`: E.D. ya no carga Qwen ni depende de APIs externas de IA. Este documento se conserva como registro histórico, no como especificación actual.
+
 # E.D.-2 · Entrenamiento híbrido 0.3
 
 ## Objetivo
