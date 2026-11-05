@@ -1,4 +1,5 @@
 import { calculateNaturalExpression } from "./natural-calculator.js";
+import { inferRelation } from "./inference-engine.mjs";
 const KEY="ed2_native_learning_v1", STOP=new Set(["que","como","para","con","por","una","uno","los","las","del","esta","este","son","ser","es","de","el","la","y","en","un","a"]);
 const clean=x=>String(x||"").trim(), norm=x=>clean(x).toLocaleLowerCase("es").normalize("NFD").replace(/[\u0300-\u036f]/g,""), words=x=>[...new Set(norm(x).match(/[a-z0-9]{2,}/g)||[])];
 const storageOf=s=>{try{return s||globalThis.localStorage||null}catch{return null}};
@@ -23,6 +24,8 @@ export function createNativeCognition({storage=null}={}){
   if(teach)return learn(teach[1],teach[2]).saved?"He incorporado ese dato a mi memoria de aprendizaje local. Podré recuperarlo cuando me preguntes sobre «"+teach[1].trim()+"».":"He entendido el dato, pero no puedo guardarlo permanentemente en este navegador.";
   if(/^(que has aprendido|que sabes ahora|muestrame lo aprendido|lista lo aprendido)\??$/.test(q)){const a=read(target);return a.length?"He aprendido "+a.length+" datos:\n"+a.slice(-12).map(x=>"• "+x.question+": "+x.answer).join("\n"):"Todavía no me has enseñado datos. Usa «Aprende que [concepto] significa [explicación]»."}
   const fm=query.match(/^olvida(?: lo aprendido sobre)?\s+(.+)$/i);if(fm){const n=forget(fm[1]);return n?"He olvidado "+n+" dato(s).":"No he encontrado datos sobre ese tema."}
+  const relation=inferRelation({facts:read(target),query});
+  if(relation.status==="entailed")return "Sí. Puedo deducirlo a partir de los datos que me has enseñado: "+relation.path.join(" → ")+". Esta conclusión se basa en "+(relation.path.length-1)+" relación(es) guardadas en mi memoria.";
   const known=recall(query,{limit:1});if(known.length)return known[0].answer+"\n\n(Recuperado de mi aprendizaje local.)";
   if(/^(hola|holaa|buenas|buenos dias|buenas tardes|buenas noches|hey|que tal)\b/.test(q))return "¡Hola! Soy E.D. Mi núcleo cognitivo propio está activo. Puedo calcular, recuperar conocimientos locales y aprender datos que me enseñes. Sigo ampliando mis capacidades.";
   if(/^(quien eres|que eres|que es ed|que es e d)\??$/.test(q))return "Soy E.D., un asistente construido con un núcleo cognitivo propio. No utilizo Qwen, Gemini, ChatGPT, Claude ni APIs de IA. Mi versión actual combina reglas lógicas, cálculo verificable, memoria local y recuperación de conocimiento. Mi comprensión del lenguaje todavía es limitada.";

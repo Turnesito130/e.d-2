@@ -1,0 +1,3 @@
+import test from "node:test";import assert from "node:assert/strict";import {inferRelation} from "../js/neural-core/inference-engine.mjs";
+test("deduce relaciones transitivas",()=>{const facts=[{question:"un perro",answer:"un mamífero"},{question:"un mamífero",answer:"un animal"}];const r=inferRelation({facts,query:"¿Los perros son animales?"});assert.equal(r.status,"entailed");assert.deepEqual(r.path,["perro","mamifero","animal"])});
+test("no inventa relaciones no enseñadas",()=>{const r=inferRelation({facts:[{question:"un perro",answer:"un mamífero"}],query:"¿Los perros son reptiles?"});assert.equal(r.status,"unknown")});
