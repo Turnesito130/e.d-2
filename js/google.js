@@ -9,6 +9,7 @@ function loadGsi() {
   });
 }
 async function connectGoogle() {
+  if (location.protocol !== "https:") { showSub("Para conectar Google, abre E.D. desde una dirección HTTPS. El cerebro local funciona desde Archivos, pero Google OAuth no admite el modo file://."); return; }
   let cid = store.get("ed_gcid");
   if (!cid) { cid = (prompt("Pega tu ID de cliente de Google (termina en .apps.googleusercontent.com)") || "").trim(); if (!cid) return; store.set("ed_gcid", cid); }
   try {
