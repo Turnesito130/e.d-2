@@ -624,7 +624,7 @@ Object.assign(exports, { createEDOpenJarvisAdapter });
   };
  function resolve(from,spec){
    if(!spec.startsWith("."))return spec;
-   const parts=from.split("/");parts.pop();
+   const parts=from.split("/").filter(Boolean);parts.pop();
    for(const part of spec.split("/")){if(!part||part===".")continue;if(part==="..")parts.pop();else parts.push(part);}
    return "./"+parts.join("/");
  }
