@@ -69,3 +69,8 @@ El conector Google existente puede autorizar, mediante el consentimiento OAuth d
 6. El botón **G** inicia la autorización de Google. Hace falta un ID de cliente OAuth válido y aceptar los permisos de solo lectura. Después E.D. puede consultar Gmail no leído, Classroom, metadatos de Drive y eventos de Calendar.
 
 La aplicación y el núcleo no necesitan Internet para el razonamiento simbólico, los cálculos y la memoria local. Internet sí es necesario para Google, búsquedas y otras páginas externas. El permiso de micrófono depende de ChromeOS y de las políticas del dispositivo. No se ha realizado una prueba física en el Acer; si ChromeOS bloquea el micrófono o el almacenamiento local, esas funciones necesitarán un ajuste específico.
+
+
+## Sincronización opcional de memoria entre dispositivos
+
+En Ajustes hay dos controles nuevos: **Sincronizar memoria con Google Drive** y **Recuperar memoria de Google Drive**. Requieren conectar Google y autorizar el permiso `drive.appdata`. La copia se guarda en el espacio privado de datos de la aplicación (`appDataFolder`), no como un documento visible en la carpeta normal de Drive. La sincronización es manual: pulsa sincronizar en el dispositivo de origen y recuperar en el otro. La recuperación combina los datos y pide confirmación; no borra la memoria local. El cerebro y la inferencia siguen ejecutándose localmente. La primera autorización puede exigir volver a consentir los nuevos permisos de Google.
