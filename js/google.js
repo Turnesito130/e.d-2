@@ -80,7 +80,7 @@ async function googleCmd(n) {
   const gm = /(correo|gmail|mail)/.test(n) && /(leer|lee|tengo|nuevo|sin leer|revisa|mira)/.test(n);
   const cl = /(tarea|classroom|deberes)/.test(n) && /(tengo|pendiente|mis|que|cuales|revisa|mira)/.test(n);
   const dr = n.match(/busca (?:en )?(?:mi )?drive (.+)/);
-  if (!gm && !cl && !dr) return null;
+  const cal = /(calendario|calendar|eventos|agenda|citas)/.test(n) && /(hoy|mañana|manana|proxim|tengo|revisa|mira|que|semana)/.test(n);\n  if (!gm && !cl && !dr && !cal) return null;
   if (!gtoken) return "Primero pulsa el botón G, abajo a la derecha, para conectar tu Google.";
   try {
     if (gm) return await gmailUnread();
