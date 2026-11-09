@@ -1,0 +1,4 @@
+import test from "node:test";import assert from "node:assert/strict";import {createCuratedKnowledgeBase,CURATED_KNOWLEDGE} from "../js/neural-core/curated-knowledge.mjs";
+test("la biblioteca inicial está incluida localmente y contiene 30 fichas aprobadas",()=>{assert.equal(CURATED_KNOWLEDGE.length,30);assert.equal(createCuratedKnowledgeBase().size,30)});
+test("recupera respuestas de ciencias y programación sin red",()=>{const kb=createCuratedKnowledgeBase();assert.match(kb.buildContext("¿Qué es la fotosíntesis?").context,/energía luminosa/);assert.match(kb.buildContext("¿Para qué sirve HTML y JavaScript?").context,/estructura/);});
+test("cada documento tiene identificador, fuente y estado aprobados",()=>{for(const d of CURATED_KNOWLEDGE){assert.ok(d.id);assert.ok(d.source);assert.equal(d.status,"approved")}});
