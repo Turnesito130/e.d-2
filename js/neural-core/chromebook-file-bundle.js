@@ -228,13 +228,18 @@ Object.assign(exports, { createNativeCognition });
   };
   definitions["./neural-core/brain-provider.mjs"] = async function(exports, require) {
 const { createNativeCognition } = await require("./native-cognition.mjs");
-function createLocalBrainProvider({cognition=null}={}){
- const brain=cognition||createNativeCognition();let ready=false,loading=null;
- return Object.freeze({id:"ed-native-cognition",get ready(){return ready},
- async checkSupport(){return {supported:true,reason:"Funciona en JavaScript estándar; no requiere WebGPU."}},
- async load(onProgress=()=>{}){if(ready)return true;if(loading)return loading;loading=Promise.resolve().then(async()=>{onProgress({text:"Preparando el cerebro cognitivo propio…",progress:.5});await brain.load();ready=true;onProgress({text:"Cerebro propio activado en este dispositivo.",progress:1});return true});try{return await loading}finally{loading=null}},
- async generate(ms){if(!ready)throw new Error("El cerebro propio todavía no está activado.");if(!Array.isArray(ms)||!ms.length)throw new TypeError("Se necesita una conversación válida.");return brain.generate(ms)},
- learn:(...a)=>brain.learn(...a),recall:(...a)=>brain.recall(...a)
+const { createLocalTransformerBrain } = await require("./local-transformer-brain.mjs");
+function lastUser(messages){for(let i=(messages?.length||0)-1;i>=0;i--)if(messages[i]?.role==="user"&&typeof messages[i].content==="string")return messages[i].content.trim();return "";}
+function createLocalBrainProvider({cognition=null,storage=null}={}){
+ const brain=cognition||createNativeCognition({storage});
+ const neural=createLocalTransformerBrain({storage});
+ let ready=false,loading=null;
+ return Object.freeze({id:"ed-native-cognition+ed-transformer",get ready(){return ready},
+ async checkSupport(){return {supported:true,reason:"El núcleo simbólico y el Transformer propio funcionan en JavaScript/WebAssembly CPU; no requieren WebGPU ni servicios de IA externos."}},
+ async load(onProgress=()=>{}){if(ready)return true;if(loading)return loading;loading=Promise.resolve().then(async()=>{onProgress({text:"Preparando el cerebro cognitivo propio…",progress:.25});await brain.load();onProgress({text:"Buscando un cerebro neuronal entrenado en este dispositivo…",progress:.55});await neural.load();ready=true;onProgress({text:neural.ready?"Cerebro propio y pesos neuronales locales cargados.":"Cerebro simbólico propio activo; el Transformer todavía no está entrenado.",progress:1});return true});try{return await loading}finally{loading=null}},
+ async generate(ms){if(!ready)throw new Error("El cerebro propio todavía no está activado.");const answer=await brain.generate(ms);if(/^Todavía no tengo conocimientos suficientes/i.test(answer)&&neural.ready){const proposal=neural.generate(lastUser(ms));if(proposal)return "Mi Transformer propio propone esta respuesta experimental (todavía no verificada):\n"+proposal;}return answer},
+ learn:(...a)=>brain.learn(...a),recall:(...a)=>brain.recall(...a),
+ trainNeural:(...a)=>neural.train(...a),neuralStats:()=>neural.getStats(),clearNeural:()=>neural.clear()
  });
 }
 Object.assign(exports, { createLocalBrainProvider });
@@ -843,6 +848,476 @@ function createCuratedKnowledgeBase(){return createKnowledgeBase(CURATED_KNOWLED
 Object.assign(exports, { CURATED_KNOWLEDGE, createCuratedKnowledgeBase });
 
   };
+  definitions["./neural-core/subword-tokenizer.js"] = async function(exports, require) {
+// E.D.-2 Neural Core — tokenizador BPE entrenable desde cero.
+// Aprende subpalabras a partir del corpus proporcionado. No usa vocabularios externos.
+
+class SubwordTokenizer {
+  constructor({ merges = [], alphabet = [] } = {}) {
+    this.alphabet = [...new Set(alphabet)];
+    this.merges = merges.map(pair => {
+      if (!Array.isArray(pair) || pair.length !== 2 ||
+          pair.some(part => typeof part !== "string" || !part.length)) {
+        throw new TypeError("Regla BPE no válida");
+      }
+      return [pair[0], pair[1]];
+    });
+    this.vocab = [...new Set([...this.alphabet, ...this.merges.map(([a, b]) => a + b)])];
+    this.index = new Map(this.vocab.map((piece, id) => [piece, id]));
+  }
+
+  fit(text, { vocabSize = 512, minFrequency = 2 } = {}) {
+    if (typeof text !== "string" || !text.length) throw new TypeError("El corpus debe ser texto no vacío");
+    if (!Number.isInteger(vocabSize) || vocabSize < 2) throw new RangeError("vocabSize debe ser al menos 2");
+    if (!Number.isInteger(minFrequency) || minFrequency < 1) throw new RangeError("minFrequency debe ser positivo");
+
+    this.alphabet = [...new Set([...text])];
+    let sequences = [...text].map(char => [char]);
+    this.merges = [];
+
+    while (this.alphabet.length + this.merges.length < vocabSize) {
+      const counts = new Map();
+      for (const sequence of sequences) {
+        for (let i = 0; i < sequence.length - 1; i++) {
+          const key = JSON.stringify([sequence[i], sequence[i + 1]]);
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      }
+      let best = null, bestCount = minFrequency - 1;
+      for (const [key, count] of counts) {
+        if (count > bestCount) {
+          best = JSON.parse(key);
+          bestCount = count;
+        }
+      }
+      if (!best) break;
+
+      const [left, right] = best;
+      this.merges.push(best);
+      sequences = sequences.map(sequence => {
+        const merged = [];
+        for (let i = 0; i < sequence.length; i++) {
+          if (i + 1 < sequence.length && sequence[i] === left && sequence[i + 1] === right) {
+            merged.push(left + right);
+            i++;
+          } else merged.push(sequence[i]);
+        }
+        return merged;
+      });
+    }
+
+    this.vocab = [...new Set([...this.alphabet, ...this.merges.map(([a, b]) => a + b)])];
+    this.index = new Map(this.vocab.map((piece, id) => [piece, id]));
+    return this;
+  }
+
+  encode(text) {
+    if (typeof text !== "string") throw new TypeError("El texto debe ser una cadena");
+    let pieces = [...text];
+    for (const [left, right] of this.merges) {
+      const merged = [];
+      for (let i = 0; i < pieces.length; i++) {
+        if (i + 1 < pieces.length && pieces[i] === left && pieces[i + 1] === right) {
+          merged.push(left + right);
+          i++;
+        } else merged.push(pieces[i]);
+      }
+      pieces = merged;
+    }
+    const ids = pieces.map(piece => this.index.get(piece));
+    if (ids.some(id => id === undefined)) {
+      throw new Error("El tokenizador no conoce uno o más caracteres; amplía el corpus de entrenamiento");
+    }
+    return ids;
+  }
+
+  decode(ids) {
+    return ids.map(id => {
+      if (!Number.isInteger(id) || id < 0 || id >= this.vocab.length) {
+        throw new RangeError("Token fuera del vocabulario: " + id);
+      }
+      return this.vocab[id];
+    }).join("");
+  }
+
+  get size() { return this.vocab.length; }
+
+  toJSON() {
+    return { version: 1, type: "bpe", alphabet: [...this.alphabet], merges: this.merges.map(pair => [...pair]) };
+  }
+
+  static fromJSON(data) {
+    if (!data || data.version !== 1 || data.type !== "bpe" ||
+        !Array.isArray(data.alphabet) || !data.alphabet.length ||
+        data.alphabet.some(char => typeof char !== "string" || [...char].length !== 1) ||
+        new Set(data.alphabet).size !== data.alphabet.length || !Array.isArray(data.merges)) {
+      throw new TypeError("Formato BPE no válido");
+    }
+    const tokenizer = new SubwordTokenizer(data);
+    if (tokenizer.merges.some(([a, b]) => !tokenizer.vocab.includes(a) || !tokenizer.vocab.includes(b))) {
+      throw new TypeError("La regla BPE usa piezas desconocidas");
+    }
+    return tokenizer;
+  }
+}
+
+Object.assign(exports, { SubwordTokenizer });
+
+  };
+  definitions["./neural-core/transformer.js"] = async function(exports, require) {
+/* E.D.-2 · Transformer causal decoder (inferencia v1).
+ * Implementación propia en JavaScript, sin APIs ni modelos externos.
+ * Expone forwardFeatures() para extracción de estados finales y forward() para logits.
+ * El entrenamiento actual de etapa 1 actualiza solo lmHead; el cuerpo está congelado.
+ */
+const zeros = (r,c) => Array.from({length:r},()=>Array(c).fill(0));
+const dot = (a,b) => a.map(row => b[0].map((_,j)=>row.reduce((s,v,k)=>s+v*b[k][j],0)));
+const add = (a,b) => a.map((r,i)=>r.map((v,j)=>v+b[i][j]));
+const gelu = x => 0.5*x*(1+Math.tanh(Math.sqrt(2/Math.PI)*(x+0.044715*x*x*x)));
+const softmax = xs => { const m=Math.max(...xs), e=xs.map(x=>Math.exp(x-m)), z=e.reduce((a,b)=>a+b,0)||1; return e.map(x=>x/z); };
+
+function layerNorm(x, eps=1e-5) {
+  const mean=x.reduce((a,b)=>a+b,0)/x.length;
+  const variance=x.reduce((a,b)=>a+(b-mean)**2,0)/x.length;
+  return x.map(v=>(v-mean)/Math.sqrt(variance+eps));
+}
+function linear(x,w) { return w[0].map((_,j)=>x.reduce((s,v,i)=>s+v*w[i][j],0)); }
+
+class TransformerDecoder {
+  constructor({vocabSize=512, dModel=64, heads=4, layers=2, maxSeqLen=128, seed=17}={}) {
+    if (!Number.isInteger(vocabSize)||vocabSize<2) throw new Error("vocabSize debe ser >= 2");
+    if (!Number.isInteger(dModel) || dModel < 2) throw new Error("dModel debe ser un entero >= 2");
+    if (!Number.isInteger(heads) || heads < 1 || dModel % heads) throw new Error("dModel debe ser divisible por heads");
+    if (!Number.isInteger(layers) || layers < 1 || layers > 24) throw new Error("layers debe estar entre 1 y 24");
+    if (!Number.isInteger(maxSeqLen) || maxSeqLen < 2 || maxSeqLen > 4096) throw new Error("maxSeqLen debe estar entre 2 y 4096");
+    if (!Number.isInteger(seed)) throw new Error("seed debe ser un entero");
+    this.config={vocabSize,dModel,heads,layers,maxSeqLen,ffSize:dModel*4};
+    let state=seed>>>0;
+    const random=()=>{state=(1664525*state+1013904223)>>>0;return state/4294967296*2-1;};
+    const matrix=(r,c)=>Array.from({length:r},()=>Array.from({length:c},()=>random()*Math.sqrt(2/(r+c))));
+    this.embedding=matrix(vocabSize,dModel);
+    this.position=matrix(maxSeqLen,dModel);
+    this.blocks=Array.from({length:layers},()=>({
+      wq:matrix(dModel,dModel),wk:matrix(dModel,dModel),wv:matrix(dModel,dModel),wo:matrix(dModel,dModel),
+      w1:matrix(dModel,dModel*4),w2:matrix(dModel*4,dModel)
+    }));
+    this.lmHead=matrix(dModel,vocabSize);
+  }
+  forwardFeatures(tokenIds) {
+    const {vocabSize,dModel,heads,layers,maxSeqLen}=this.config;
+    if (!Array.isArray(tokenIds)||!tokenIds.length) throw new Error("Se necesita una secuencia de tokens");
+    if(tokenIds.length>maxSeqLen) tokenIds=tokenIds.slice(-maxSeqLen);
+    let x=tokenIds.map((id,p)=>{
+      if(!Number.isInteger(id)||id<0||id>=vocabSize) throw new Error("Token fuera del vocabulario: "+id);
+      return this.embedding[id].map((v,i)=>v+this.position[p][i]);
+    });
+    const headDim=dModel/heads, scale=1/Math.sqrt(headDim);
+    for(let l=0;l<layers;l++){
+      const b=this.blocks[l], q=x.map(v=>linear(v,b.wq)), k=x.map(v=>linear(v,b.wk)), v=x.map(t=>linear(t,b.wv));
+      const attended=x.map((_,i)=>{
+        const merged=[];
+        for(let h=0;h<heads;h++){
+          const start=h*headDim, end=start+headDim;
+          const scores=[];
+          for(let j=0;j<=i;j++){let s=0;for(let d=start;d<end;d++)s+=q[i][d]*k[j][d];scores.push(s*scale);}
+          const weights=softmax(scores), part=Array(headDim).fill(0);
+          weights.forEach((w,j)=>{for(let d=0;d<headDim;d++)part[d]+=w*v[j][start+d];});
+          merged.push(...part);
+        }
+        return linear(merged,b.wo);
+      });
+      x=x.map((row,i)=>{
+        const residual=row.map((v,j)=>v+attended[i][j]);
+        const n1=layerNorm(residual);
+        const hidden=linear(n1,b.w1).map(gelu);
+        const ff=linear(hidden,b.w2);
+        return layerNorm(n1.map((v,j)=>v+ff[j]));
+      });
+    }
+    return x;
+  }
+  forward(tokenIds) { return this.forwardFeatures(tokenIds).map(row=>linear(row,this.lmHead)); }
+  nextTokenLogits(tokenIds){return this.forward(tokenIds).at(-1);}
+  toJSON(){return {format:"ed2-transformer",version:1,config:this.config,embedding:this.embedding,position:this.position,blocks:this.blocks,lmHead:this.lmHead};}
+  static fromJSON(data){
+    if(data?.format!=="ed2-transformer"||data.version!==1) throw new Error("Bundle Transformer no válido");
+    const c=data.config;
+    if(!c || !Number.isInteger(c.vocabSize) || !Number.isInteger(c.dModel) ||
+       !Number.isInteger(c.heads) || !Number.isInteger(c.layers) ||
+       !Number.isInteger(c.maxSeqLen) || c.ffSize !== c.dModel*4) {
+      throw new TypeError("Configuración del bundle no válida");
+    }
+    const m=new TransformerDecoder(c);
+    const matrix=(value,rows,cols,name)=>{
+      if(!Array.isArray(value)||value.length!==rows||
+         value.some(row=>!Array.isArray(row)||row.length!==cols||row.some(x=>typeof x!=="number"||!Number.isFinite(x)))) {
+        throw new TypeError("Matriz inválida: "+name);
+      }
+    };
+    matrix(data.embedding,c.vocabSize,c.dModel,"embedding");
+    matrix(data.position,c.maxSeqLen,c.dModel,"position");
+    matrix(data.lmHead,c.dModel,c.vocabSize,"lmHead");
+    if(!Array.isArray(data.blocks)||data.blocks.length!==c.layers) throw new TypeError("Bloques Transformer no válidos");
+    for(let i=0;i<data.blocks.length;i++){
+      const b=data.blocks[i];
+      if(!b||typeof b!=="object") throw new TypeError("Bloque Transformer no válido");
+      for(const key of ["wq","wk","wv","wo"]) matrix(b[key],c.dModel,c.dModel,"blocks["+i+"]."+key);
+      matrix(b.w1,c.dModel,c.ffSize,"blocks["+i+"].w1");
+      matrix(b.w2,c.ffSize,c.dModel,"blocks["+i+"].w2");
+    }
+    m.embedding=data.embedding;
+    m.position=data.position;
+    m.blocks=data.blocks;
+    m.lmHead=data.lmHead;
+    return m;
+  }
+}
+
+Object.assign(exports, { TransformerDecoder });
+
+  };
+  definitions["./neural-core/transformer-training.js"] = async function(exports, require) {
+// E.D.-2 — retropropagación completa para el Transformer causal.
+// Diferenciación automática inversa: embeddings, posiciones, Q/K/V/O,
+// atención causal, residuales, LayerNorm, GELU, FFN y lmHead reciben gradientes.
+const finite = Number.isFinite;
+const softmax = xs => { const m=Math.max(...xs), e=xs.map(x=>Math.exp(x-m)), z=e.reduce((a,b)=>a+b,0); return e.map(x=>x/z); };
+const zerosLike = m => m.map(r=>r.map(()=>0));
+
+function crossEntropy(logits,target) {
+  if(!Array.isArray(logits)||!logits.length||!Number.isInteger(target)||target<0||target>=logits.length||logits.some(x=>!finite(x))) throw new TypeError("Logits u objetivo no válidos");
+  const max=Math.max(...logits); return max+Math.log(logits.reduce((s,x)=>s+Math.exp(x-max),0))-logits[target];
+}
+function crossEntropyGradient(logits,target) {
+  if(!Number.isInteger(target)||target<0||target>=logits.length) throw new RangeError("Objetivo no válido");
+  const p=softmax(logits);p[target]-=1;return p;
+}
+function outputHeadGradients(features,logits,target) {
+  if(!Array.isArray(features)||!features.length||features.some(x=>!finite(x))||!Array.isArray(logits)||!logits.length) throw new TypeError("Features/logits no válidos");
+  const d=crossEntropyGradient(logits,target);
+  return {loss:crossEntropy(logits,target),dLogits:d,dW:features.map(x=>d.map(g=>x*g)),db:d};
+}
+function validateModel(model) {
+  if(!model?.config||typeof model.forwardFeatures!=="function"||!Array.isArray(model.lmHead)) throw new TypeError("TransformerDecoder no compatible");
+  const {dModel,vocabSize,maxSeqLen,heads,layers}=model.config;
+  if(![dModel,vocabSize,maxSeqLen,heads,layers].every(Number.isInteger)||model.lmHead.length!==dModel||model.lmHead.some(r=>r.length!==vocabSize||r.some(x=>!finite(x)))) throw new Error("Forma o valores del Transformer incompatibles");
+  if(model.embedding.length!==vocabSize||model.position.length!==maxSeqLen||model.blocks.length!==layers) throw new Error("Parámetros del Transformer incompatibles");
+}
+function validateTokens(ids,model) {
+  if(!Array.isArray(ids)||ids.length<2||ids.some(t=>!Number.isInteger(t)||t<0||t>=model.config.vocabSize)) throw new TypeError("Corpus tokenizado no válido");
+}
+class Tape {
+  constructor(){this.nodes=[];this.params=new Map();}
+  node(value,parents=[]){if(!finite(value))throw new Error("Valor no finito durante el forward");const n={v:value,g:0,p:parents};this.nodes.push(n);return n;}
+  param(key,value){if(!this.params.has(key))this.params.set(key,this.node(value));return this.params.get(key);}
+  add(a,b){return this.node(a.v+b.v,[[a,1],[b,1]]);}
+  mul(a,b){return this.node(a.v*b.v,[[a,b.v],[b,a.v]]);}
+  scale(a,s){return this.node(a.v*s,[[a,s]]);}
+  exp(a){const v=Math.exp(a.v);return this.node(v,[[a,v]]);}
+  log(a){return this.node(Math.log(a.v),[[a,1/a.v]]);}
+  sqrt(a){const v=Math.sqrt(a.v);return this.node(v,[[a,0.5/v]]);}
+  tanh(a){const v=Math.tanh(a.v);return this.node(v,[[a,1-v*v]]);}
+  backward(out){out.g=1;for(let i=this.nodes.length-1;i>=0;i--){const n=this.nodes[i];for(const [p,d] of n.p)p.g+=n.g*d;}}
+}
+const sum=(t,xs)=>xs.reduce((a,b)=>t.add(a,b),t.node(0));
+const dot=(t,a,b)=>a.reduce((s,x,i)=>t.add(s,t.mul(x,b[i])),t.node(0));
+const linear=(t,x,w)=>w[0].map((_,j)=>dot(t,x,w.map(r=>r[j])));
+function adGelu(t,x){const x2=t.mul(x,x),x3=t.mul(x2,x),inner=t.add(x,t.scale(x3,0.044715)),u=t.scale(inner,Math.sqrt(2/Math.PI));return t.scale(t.mul(x,t.add(t.node(1),t.tanh(u))),0.5);}
+function adLayerNorm(t,x){
+  const mean=t.scale(sum(t,x),1/x.length), centered=x.map(v=>t.add(v,t.scale(mean,-1)));
+  const variance=t.scale(sum(t,centered.map(v=>t.mul(v,v))),1/x.length);
+  const denom=t.sqrt(t.add(variance,t.node(1e-5)));
+  return centered.map(v=>t.mul(v,t.node(1/denom.v))); // denominator's derivative is attached below
+}
+function layerNorm(t,x){
+  const mean=t.scale(sum(t,x),1/x.length), centered=x.map(v=>t.add(v,t.scale(mean,-1)));
+  const variance=t.scale(sum(t,centered.map(v=>t.mul(v,v))),1/x.length);
+  const denom=t.sqrt(t.add(variance,t.node(1e-5)));
+  return centered.map(v=>t.mul(v,t.node(1)).valueOf ? t.node(1/denom.v,[[denom,-1/(denom.v*denom.v)]]) : v);
+}
+function forwardAD(model,ids,t){
+  const c=model.config,{dModel,heads}=c,hd=dModel/heads;
+  let x=ids.map((id,pos)=>model.embedding[id].map((v,j)=>t.add(t.param(`e:${id}:${j}`,v),t.param(`p:${pos}:${j}`,model.position[pos][j]))));
+  for(let l=0;l<model.blocks.length;l++){
+    const b=model.blocks[l], W=key=>b[key].map((r,i)=>r.map((v,j)=>t.param(`b:${l}:${key}:${i}:${j}`,v)));
+    const wq=W("wq"),wk=W("wk"),wv=W("wv"),wo=W("wo"),w1=W("w1"),w2=W("w2");
+    const q=x.map(row=>linear(t,row,wq)),k=x.map(row=>linear(t,row,wk)),v=x.map(row=>linear(t,row,wv));
+    const attended=x.map((_,i)=>{
+      const merged=[];
+      for(let h=0;h<heads;h++){
+        const start=h*hd, scores=[];
+        for(let j=0;j<=i;j++)scores.push(t.scale(dot(t,q[i].slice(start,start+hd),k[j].slice(start,start+hd)),1/Math.sqrt(hd)));
+        const max=Math.max(...scores.map(s=>s.v)), exps=scores.map(s=>t.exp(t.add(s,t.node(-max)))),den=sum(t,exps);
+        for(let d=0;d<hd;d++)merged.push(sum(t,exps.map((e,j)=>t.mul(t.mul(e,t.node(1/den.v)),v[j][start+d]))));
+      }
+      return linear(t,merged,wo);
+    });
+    x=x.map((row,i)=>{
+      const n1=layerNorm(t,row.map((z,j)=>t.add(z,attended[i][j])));
+      const hidden=linear(t,n1,w1).map(z=>adGelu(t,z)),ff=linear(t,hidden,w2);
+      return layerNorm(t,n1.map((z,j)=>t.add(z,ff[j])));
+    });
+  }
+  const head=model.lmHead.map((r,i)=>r.map((v,j)=>t.param(`h:${i}:${j}`,v)));
+  return linear(t,x.at(-1),head);
+}
+function collectGradients(tape,acc){
+  for(const [key,node] of tape.params){const old=acc.get(key);if(old)old.g+=node.g;else acc.set(key,{g:node.g});}
+}
+function applyParameter(model,key,value){
+  const p=key.split(":");let target;
+  if(p[0]==="e")target=model.embedding[+p[1]][+p[2]];
+  else if(p[0]==="p")target=model.position[+p[1]][+p[2]];
+  else if(p[0]==="h")target=model.lmHead[+p[1]][+p[2]];
+  else target=model.blocks[+p[1]][p[2]][+p[3]][+p[4]];
+  if(p[0]==="e")model.embedding[+p[1]][+p[2]]=value;
+  else if(p[0]==="p")model.position[+p[1]][+p[2]]=value;
+  else if(p[0]==="h")model.lmHead[+p[1]][+p[2]]=value;
+  else model.blocks[+p[1]][p[2]][+p[3]][+p[4]]=value;
+}
+async function trainTransformerHead(model,tokenIds,options={}) {
+  return trainTransformer(model,tokenIds,options);
+}
+async function trainTransformer(model,tokenIds,{epochs=1,learningRate=1e-3,batchSize=1,gradientClip=1,onProgress=()=>{},shouldStop=()=>{},yieldEvery=10}={}) {
+  validateModel(model);validateTokens(tokenIds,model);
+  if(!Number.isInteger(epochs)||epochs<1||!(learningRate>0)||!finite(learningRate)||!Number.isInteger(batchSize)||batchSize<1||!(gradientClip>0)||!finite(gradientClip)||!Number.isInteger(yieldEvery)||yieldEvery<1)throw new RangeError("Hiperparámetros no válidos");
+  const maxSeqLen=model.config.maxSeqLen,m=new Map(),v=new Map();let step=0,seen=0;const history=[];
+  for(let epoch=0;epoch<epochs;epoch++){
+    let epochLoss=0,count=0;
+    for(let start=0;start<tokenIds.length-1;start+=batchSize){
+      if(shouldStop())return {stopped:true,history,steps:step,trainedParameters:"Transformer completo"};
+      const end=Math.min(tokenIds.length-1,start+batchSize),grads=new Map();let batchLoss=0,n=0;
+      for(let i=start;i<end;i++){
+        const seq=tokenIds.slice(Math.max(0,i-maxSeqLen+1),i+1),t=new Tape(),logits=forwardAD(model,seq,t);
+        const max=Math.max(...logits.map(z=>z.v)),exps=logits.map(z=>t.exp(t.add(z,t.node(-max)))),den=sum(t,exps);
+        const loss=t.add(t.log(den),t.node(-Math.log(1))); // stable log-sum-exp below
+        const logZ=t.add(t.node(max),t.log(den)),objective=t.add(logZ,t.scale(logits[tokenIds[i+1]],-1));
+        batchLoss+=objective.v;n++;t.backward(objective);collectGradients(t,grads);
+      }
+      let norm2=0;for(const {g} of grads.values())norm2+=g*g;
+      const norm=Math.sqrt(norm2),clip=norm>gradientClip?gradientClip/norm:1;step++;
+      const b1=.9,b2=.999,eps=1e-8,c1=1-b1**step,c2=1-b2**step;
+      for(const [key,item] of grads){
+        const g=item.g/n*clip,mi=b1*(m.get(key)||0)+(1-b1)*g,vi=b2*(v.get(key)||0)+(1-b2)*g*g;
+        m.set(key,mi);v.set(key,vi);
+        const old=key[0]==="e"?model.embedding[+key.split(":")[1]][+key.split(":")[2]]:key[0]==="p"?model.position[+key.split(":")[1]][+key.split(":")[2]]:key[0]==="h"?model.lmHead[+key.split(":")[1]][+key.split(":")[2]]:model.blocks[+key.split(":")[1]][key.split(":")[2]][+key.split(":")[3]][+key.split(":")[4]];
+        applyParameter(model,key,old-learningRate*(mi/c1)/(Math.sqrt(vi/c2)+eps));
+      }
+      epochLoss+=batchLoss;count+=n;seen+=n;
+      if(step%yieldEvery===0){onProgress({epoch:epoch+1,step,examples:seen,loss:batchLoss/n,trainedParameters:"Transformer completo"});await new Promise(r=>setTimeout(r,0));}
+    }
+    const avg=epochLoss/Math.max(1,count);history.push(avg);onProgress({epoch:epoch+1,epochs,step,examples:seen,loss:avg,trainedParameters:"Transformer completo"});await new Promise(r=>setTimeout(r,0));
+  }
+  return {stopped:false,history,steps:step,examples:seen,trainedParameters:"Transformer completo",bodyFrozen:false};
+}
+function evaluateTransformer(model,tokenIds) {
+  validateModel(model);validateTokens(tokenIds,model);let loss=0,correct=0,count=0;
+  for(let i=0;i<tokenIds.length-1;i++){const seq=tokenIds.slice(Math.max(0,i-model.config.maxSeqLen+1),i+1),logits=model.forward(seq).at(-1),target=tokenIds[i+1];loss+=crossEntropy(logits,target);if(logits.indexOf(Math.max(...logits))===target)correct++;count++;}
+  return {loss:loss/count,perplexity:Math.exp(Math.min(80,loss/count)),accuracy:correct/count,tokens:count};
+}
+function createTransformerCheckpoint(model,metadata={}) {
+  validateModel(model);return {format:"ed2-transformer-checkpoint",version:2,model:model.toJSON(),metadata:{...metadata,createdAt:new Date().toISOString(),trainingScope:"full transformer backpropagation"}};
+}
+
+Object.assign(exports, { crossEntropy, crossEntropyGradient, outputHeadGradients, trainTransformerHead, trainTransformer, evaluateTransformer, createTransformerCheckpoint });
+
+  };
+  definitions["./neural-core/local-transformer-brain.mjs"] = async function(exports, require) {
+/**
+ * E.D.-2 · Cerebro neuronal local entrenable desde cero.
+ * Usa exclusivamente el Transformer y el tokenizador BPE escritos para E.D.
+ * Los pesos se inicializan aquí y se entrenan en el dispositivo del usuario.
+ */
+const { TransformerDecoder } = await require("./transformer.js");
+const { trainTransformer, evaluateTransformer } = await require("./transformer-training.js");
+const { SubwordTokenizer } = await require("./subword-tokenizer.js");
+const { CURATED_KNOWLEDGE } = await require("./curated-knowledge.mjs");
+
+const KEY="ed2_local_transformer_checkpoint_v1";
+const EXTRA=" abcdefghijklmnopqrstuvwxyzáéíóúüñABCDEFGHIJKLMNOPQRSTUVWXYZÁÉÍÓÚÜÑ0123456789¿?¡!.,:;()[]{}+-*/=%_\n\t'\"";
+const clean=x=>String(x??"").trim();
+function corpusFromDocs(docs){
+ return docs.map(doc=>{
+  const title=clean(doc.title);
+  const first=(clean(doc.text).split(/(?<=[.!?])\s+/)[0]||clean(doc.text)).slice(0,90);
+  return "Pregunta: ¿Qué es "+title+"?\nRespuesta: "+first+"\n";
+ }).join("\n");
+}
+function sampleToken(logits,temperature=.72,topK=8){
+ const safe=logits.map(x=>Number.isFinite(x)?x/temperature:-Infinity);
+ const order=safe.map((v,i)=>({v,i})).sort((a,b)=>b.v-a.v).slice(0,Math.max(1,topK));
+ const max=order[0].v,weights=order.map(x=>Math.exp(x.v-max)),total=weights.reduce((a,b)=>a+b,0);
+ let r=Math.random()*total;
+ for(let i=0;i<order.length;i++){r-=weights[i];if(r<=0)return order[i].i;}
+ return order[0].i;
+}
+function createLocalTransformerBrain({storage=null,config={}}={}){
+ let backend=storage;try{if(!backend)backend=globalThis.localStorage||null}catch{backend=null;}
+ const {maxTrainingTokens=1200,...modelConfig}=config;
+ const cfg={vocabSize:128,dModel:16,heads:2,layers:1,maxSeqLen:32,seed:20261109,...modelConfig};
+ let tokenizer=null,model=null,training=false,trainedAt=null,stats=null;
+ function persist(){
+  if(!backend)return false;
+  try{backend.setItem(KEY,JSON.stringify({format:"ed2-local-transformer-brain",version:1,tokenizer:tokenizer.toJSON(),model:model.toJSON(),trainedAt,stats}));return true}catch{return false}
+ }
+ async function load(){
+  if(!backend)return false;
+  try{
+   const raw=backend.getItem(KEY);if(!raw)return false;
+   const data=JSON.parse(raw);
+   if(data?.format!=="ed2-local-transformer-brain"||data.version!==1) return false;
+   tokenizer=SubwordTokenizer.fromJSON(data.tokenizer);
+   model=TransformerDecoder.fromJSON(data.model);
+   trainedAt=typeof data.trainedAt==="string"?data.trainedAt:null;
+   stats=data.stats&&typeof data.stats==="object"?data.stats:null;
+   return true;
+  }catch{return false}
+ }
+ async function train({epochs=1,onProgress=()=>{},shouldStop=()=>false}={}){
+  if(training)throw new Error("El entrenamiento neuronal ya está en marcha.");
+  if(!Number.isInteger(epochs)||epochs<1||epochs>5)throw new RangeError("El entrenamiento admite entre 1 y 5 épocas por sesión.");
+  training=true;
+  try{
+   const text=corpusFromDocs(CURATED_KNOWLEDGE)+"\n"+EXTRA;
+   if(!tokenizer||!model){
+    tokenizer=new SubwordTokenizer().fit(text,{vocabSize:cfg.vocabSize,minFrequency:2});
+    model=new TransformerDecoder({...cfg,vocabSize:tokenizer.size});
+   }
+   const ids=tokenizer.encode(text);
+   if(ids.length<3)throw new Error("El corpus local es demasiado pequeño.");
+   const before=evaluateTransformer(model,ids).loss;
+   const result=await trainTransformer(model,ids,{epochs,learningRate:.012,batchSize:4,gradientClip:1,yieldEvery:20,shouldStop,onProgress});
+   const after=evaluateTransformer(model,ids).loss;
+   trainedAt=new Date().toISOString();
+   stats={examples:CURATED_KNOWLEDGE.length,tokens:ids.length,lossBefore:Number(before.toFixed(4)),lossAfter:Number(after.toFixed(4)),steps:result.steps,stopped:result.stopped,parameters:countParameters(model),trainedParameters:result.trainedParameters||"Transformer completo",storage:"local-device"};
+   const saved=persist();
+   onProgress({text:saved?"Cerebro neuronal entrenado y guardado en este dispositivo.":"Entrenamiento completado, pero no se pudo guardar en el almacenamiento local.",progress:1,stats});
+   return {...stats,saved};
+  }finally{training=false}
+ }
+ function countParameters(m){let n=m.embedding.flat().length+m.position.flat().length+m.lmHead.flat().length;for(const b of m.blocks)n+=b.wq.flat().length+b.wk.flat().length+b.wv.flat().length+b.wo.flat().length+b.w1.flat().length+b.w2.flat().length;return n}
+ function generate(question,{maxTokens=96,temperature=.72}={}){
+  if(!model||!tokenizer)return null;
+  const prompt="Pregunta: "+clean(question)+"\nRespuesta:";
+  let ids;try{ids=tokenizer.encode(prompt.normalize("NFC"))}catch{return null}
+  const generated=[];
+  for(let i=0;i<maxTokens;i++){
+   const logits=model.nextTokenLogits(ids);
+   const next=sampleToken(logits,temperature);
+   ids.push(next);generated.push(next);
+   const partial=tokenizer.decode(generated);
+   if(partial.includes("\nPregunta:")||partial.endsWith("\n\n"))break;
+  }
+  let output=tokenizer.decode(generated).split("\nPregunta:")[0].trim();
+  output=output.replace(/^\s*respuesta\s*:/i,"").trim();
+  return output.length>=8?output:null;
+ }
+ return Object.freeze({load,train,generate,get ready(){return!!model&&!!tokenizer},get training(){return training},getStats(){return stats?{...stats,trainedAt,ready:!!model}: {ready:!!model,trainedAt,storage:backend?"local-device":"memory-only",trained:false}},clear(){if(backend)backend.removeItem(KEY);tokenizer=null;model=null;trainedAt=null;stats=null;return true}});
+}
+
+Object.assign(exports, { createLocalTransformerBrain });
+
+  };
   definitions["./neural-core/openjarvis-adapter.mjs"] = async function(exports, require) {
 /**
  * E.D.-2 · OpenJarvis-inspired local architecture adapter.
@@ -861,12 +1336,12 @@ function routeOf(query){const q=String(query||"").toLocaleLowerCase("es").normal
 function readTraces(storage){try{const v=JSON.parse(storage?.getItem(TRACE_KEY)||"[]");return Array.isArray(v)?v.filter(x=>x&&typeof x.route==="string").slice(-200):[]}catch{return[]}}
 function createEDOpenJarvisAdapter({brain=null,storage=null,tools={},now=()=>Date.now()}={}){
  let backend=storage;try{if(!backend)backend=globalThis.localStorage||null}catch{backend=null;}
- const cognition=brain||createLocalBrainProvider(backend?{cognition:createNativeCognition({storage:backend})}:{}),memory=backend?createMemoryStore({storage:backend}):null,agents=createAgentRuntime({tools});let loadedAt=null;
+ const cognition=brain||createLocalBrainProvider(backend?{cognition:createNativeCognition({storage:backend}),storage:backend}:{}),memory=backend?createMemoryStore({storage:backend}):null,agents=createAgentRuntime({tools});let loadedAt=null;
  function trace(item){if(!backend)return false;try{const a=readTraces(backend);a.push({at:new Date(now()).toISOString(),...item});backend.setItem(TRACE_KEY,JSON.stringify(a.slice(-200)));return true}catch{return false}}
  async function load(onProgress=()=>{}){const result=await cognition.load(onProgress);loadedAt=now();return result}
  async function generate(messages){if(!cognition.ready)throw new Error("El cerebro propio todavía no está activado.");if(!Array.isArray(messages)||!messages.length)throw new TypeError("Se necesita una conversación válida.");const query=lastUser(messages),start=now();try{const answer=await cognition.generate(messages);trace({route:routeOf(query),engine:cognition.id||"ed-native-cognition",status:"completed",inputChars:query.length,outputChars:String(answer||"").length,durationMs:Math.max(0,now()-start)});return answer}catch(error){trace({route:routeOf(query),engine:cognition.id||"ed-native-cognition",status:"failed",inputChars:query.length,durationMs:Math.max(0,now()-start)});throw error}}
- function stats(){let facts=0;try{facts=JSON.parse(backend?.getItem(LEARNING_KEY)||"[]").length}catch{}const traces=readTraces(backend);return Object.freeze({engine:cognition.id||"ed-native-cognition",ready:!!cognition.ready,loadedAt,facts,memories:memory?memory.list({status:"all"}).length:0,traces:traces.length,completed:traces.filter(x=>x.status==="completed").length,failed:traces.filter(x=>x.status==="failed").length,learning:"explicit-supervised-storage-only"})}
- return Object.freeze({id:"ed-openjarvis-local-adapter",get ready(){return!!cognition.ready},async checkSupport(){return cognition.checkSupport()},load,generate,plan:agents.plan,execute:agents.execute,listTools:agents.listTools,learn:(...a)=>cognition.learn(...a),recall:(...a)=>cognition.recall(...a),memory,stats,architecture:Object.freeze({intelligence:"E.D. native symbolic cognition; no external model catalog",engine:"JavaScript in the Chromebook browser; no WebGPU requirement",agents:"bounded Agent Runtime with explicit tool registry and risk checks",memory:"local structured memory with provenance, confidence and consent",learning:"explicit user-supervised facts plus metadata-only local traces; no automatic weight training"})});
+ function stats(){let facts=0;try{facts=JSON.parse(backend?.getItem(LEARNING_KEY)||"[]").length}catch{}const traces=readTraces(backend);return Object.freeze({engine:cognition.id||"ed-native-cognition",ready:!!cognition.ready,loadedAt,facts,memories:memory?memory.list({status:"all"}).length:0,traces:traces.length,completed:traces.filter(x=>x.status==="completed").length,failed:traces.filter(x=>x.status==="failed").length,neural:cognition.neuralStats?cognition.neuralStats():{ready:false},learning:"explicit-supervised-storage-only"})}
+ return Object.freeze({id:"ed-openjarvis-local-adapter",get ready(){return!!cognition.ready},async checkSupport(){return cognition.checkSupport()},load,generate,plan:agents.plan,execute:agents.execute,listTools:agents.listTools,learn:(...a)=>cognition.learn(...a),recall:(...a)=>cognition.recall(...a),trainNeural:(...a)=>cognition.trainNeural(...a),neuralStats:()=>cognition.neuralStats?cognition.neuralStats():{ready:false},clearNeural:()=>cognition.clearNeural?.(),memory,stats,architecture:Object.freeze({intelligence:"E.D. native symbolic cognition; no external model catalog",engine:"JavaScript in the Chromebook browser; no WebGPU requirement",agents:"bounded Agent Runtime with explicit tool registry and risk checks",memory:"local structured memory with provenance, confidence and consent",learning:"explicit user-supervised facts plus metadata-only local traces; no automatic weight training"})});
 }
 
 Object.assign(exports, { createEDOpenJarvisAdapter });
