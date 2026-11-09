@@ -4,7 +4,6 @@ let edBrainProviderPromise = null;
 let edLocalModelReady = false;
 let edLocalModelLoading = false;
 let edLocalModelError = "";
-let edAgentRuntimeModule = null;
 let edMemoryStorePromise = null;
 let edMemoryContextModule = null;
 let edKnowledgeBasePromise = null;
@@ -70,7 +69,36 @@ function setLocalModelStatus(message, progress) {
   if (fill && Number.isFinite(progress)) fill.style.width = Math.max(0, Math.min(100, progress * 100)) + "%";
 }
 async function getEDBrainProvider() {
-  edBrainProviderPromise ||= import("./neural-core/openjarvis-adapter.mjs").then(({ createEDOpenJarvisAdapter }) => createEDOpenJarvisAdapter());
+  edBrainProviderPromise ||= import("./neural-core/openjarvis-adapter.mjs").then(({ createEDOpenJarvisAdapter }) => createEDOpenJarvisAdapter({ tools: {
+    calculate: async ({ expression }) => {
+      const result = await calc(expression);
+      return result === null ? "No pude interpretar el cálculo con seguridad." : result;
+    },
+    note: async ({ text: note }) => {
+      const memory = await getStructuredMemory();
+      memory.remember({ content: note, type: "note", source: "user_explicit", confidence: 0.95, consent: true });
+      return "He guardado esa nota en la memoria estructurada.";
+    },
+    memory_search: async ({ query }) => {
+      const memory = await getStructuredMemory();
+      const found = memory.search(query, { limit: 5, includeUncertain: true });
+      return found.length ? found.map(item => item.content + " (tipo: " + item.type + ", confianza: " + Math.round(item.confidence * 100) + "%)").join("\\n") : "No he encontrado recuerdos relacionados.";
+    },
+    search: async ({ query }) => {
+      openUrl("https://www.google.com/search?q=" + encodeURIComponent(query), "la búsqueda");
+      return "He preparado la búsqueda en Google.";
+    },
+    open_url: async ({ url }) => {
+      if (!/^https?:\\/\\//i.test(url)) throw new Error("Dirección no permitida.");
+      openUrl(url, "la página solicitada");
+      return "He preparado la apertura de la página.";
+    },
+    timer: async ({ seconds }) => {
+      const value = Math.max(1, Math.min(86400, Number(seconds) || 0));
+      setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak("El temporizador ha terminado."); }, value * 1000);
+      return "Temporizador iniciado durante " + value + " segundos.";
+    }
+  } }));
   edBrainProvider = await edBrainProviderPromise;
   return edBrainProvider;
 }
@@ -123,39 +151,7 @@ else setupEDLocalModelControls();
 
 async function runAgentPlan(text, byText) {
   try {
-    edAgentRuntimeModule ||= await import("./neural-core/agent-runtime.mjs");
-    const runtime = edAgentRuntimeModule.createAgentRuntime({ tools: {
-      calculate: async ({ expression }) => {
-        const result = await calc(expression);
-        return result === null ? "No pude interpretar el cálculo con seguridad." : result;
-      },
-      note: async ({ text: note }) => {
-        const memory = await getStructuredMemory();
-        memory.remember({ content: note, type: "note", source: "user_explicit", confidence: 0.95, consent: true });
-        return "He guardado esa nota en la memoria estructurada.";
-      },
-      memory_search: async ({ query }) => {
-        const memory = await getStructuredMemory();
-        const found = memory.search(query, { limit: 5, includeUncertain: true });
-        return found.length
-          ? found.map(item => item.content + " (tipo: " + item.type + ", confianza: " + Math.round(item.confidence * 100) + "%)").join("\n")
-          : "No he encontrado recuerdos relacionados.";
-      },
-      search: async ({ query }) => {
-        openUrl("https://www.google.com/search?q=" + encodeURIComponent(query), "la búsqueda");
-        return "He preparado la búsqueda en Google.";
-      },
-      open_url: async ({ url }) => {
-        if (!/^https?:\/\//i.test(url)) throw new Error("Dirección no permitida.");
-        openUrl(url, "la página solicitada");
-        return "He preparado la apertura de la página.";
-      },
-      timer: async ({ seconds }) => {
-        const value = Math.max(1, Math.min(86400, Number(seconds) || 0));
-        setTimeout(() => { viaText = false; showSub("¡Tiempo!"); speak("El temporizador ha terminado."); }, value * 1000);
-        return "Temporizador iniciado durante " + value + " segundos.";
-      }
-    } });
+    const runtime = await getEDBrainProvider();
     const plan = runtime.plan(text);
     if (!plan.steps.length) return false;
     const outcome = await runtime.execute(plan);
@@ -163,6 +159,7 @@ async function runAgentPlan(text, byText) {
       item.status === "completed" ? String(item.value) : item.message || "La acción no se ha ejecutado."
     ).join(" ");
     reply(text, answer || "No había ninguna acción compatible.", byText);
+    refreshEDArchitectureStats();
     return true;
   } catch (error) {
     console.error("E.D. Agent Runtime:", error);
