@@ -1,7 +1,6 @@
 /* E.D.-2 · Navegador local-file compatibility bundle. */
 (function(){
- "use strict";
- const definitions=Object.create(null),cache=new Map();
+ "use strict";const definitions=Object.create(null),cache=new Map();
   definitions["./neural-core/logic-engine.js"] = async function(exports, require) {
 // E.D.-2 · Motor lógico determinista v0.1
 // Evalúa expresiones matemáticas sin eval(), Function ni servicios externos.
@@ -217,7 +216,7 @@ function createNativeCognition({storage=null}={}){
   if(/^(quien eres|que eres|que es ed|que es e d)\??$/.test(q))return "Soy E.D., un asistente construido con un núcleo cognitivo propio. No utilizo Qwen, Gemini, ChatGPT, Claude ni APIs de IA. Mi versión actual combina reglas lógicas, cálculo verificable, memoria local y recuperación de conocimiento. Mi comprensión del lenguaje todavía es limitada.";
   if(/^(cuanto es|cuanto da|calcula|calcular|resuelve|resuelveme|haz la cuenta)\b/.test(q)||/\d\s*(?:\+|-|\*|\/|\^|por|mas|menos|dividido)\s*\d/.test(q)){try{const r=calculateNaturalExpression(query),v=Number.isInteger(r.value)?String(r.value):String(Number(r.value.toPrecision(12)));return tutor?"Vamos paso a paso.\n1. Operación: "+r.expression+"\n2. Aplicamos el orden de las operaciones.\n3. Resultado: "+v+".\n4. El motor matemático propio ha verificado el cálculo.":"El resultado es "+v+". (Calculado por el motor matemático propio de E.D.)"}catch{}}
   const remembered=memoryDocs(system).map(x=>({...x,score:score(query,x.text)})).filter(x=>x.score>=.25).sort((a,b)=>b.score-a.score)[0];
-  if(remembered)return "Según mi memoria local ("+remembered.source+"), "+remembered.text+"\\n\\nEs un recuerdo guardado, no una comprobación independiente.";
+  if(remembered)return "Según mi memoria local ("+remembered.source+"), "+remembered.text+ "\n\nEs un recuerdo guardado, no una comprobación independiente.";
   const d=docs(system).map(x=>({...x,score:score(query,x.text)})).sort((a,b)=>b.score-a.score)[0];
   if(d?.score>=.2){const ss=d.text.split(/(?<=[.!?])\s+/).filter(Boolean),sel=ss.filter(x=>score(query,x)>=.2).slice(0,3);return (tutor?"Vamos a estudiarlo.\n\n":"")+(sel.length?sel:ss.slice(0,2)).join(" ")+(d.source?"\n\nFuente local: "+d.source:"")}
   return "Todavía no tengo conocimientos suficientes para responder con fiabilidad a eso. No voy a inventarme una respuesta. Puedes enseñarme un dato con «Aprende que [concepto] significa [explicación]» o añadir material revisado a la biblioteca local de E.D.";
@@ -625,5 +624,4 @@ Object.assign(exports, { createEDOpenJarvisAdapter });
   };
  function resolve(from,spec){if(!spec.startsWith("."))return spec;const parts=from.split("/").filter(part=>part&&part!==".");parts.pop();for(const part of spec.split("/")){if(!part||part===".")continue;if(part==="..")parts.pop();else parts.push(part);}return "./"+parts.join("/");}
  async function load(id){if(cache.has(id))return cache.get(id);const factory=definitions[id];if(!factory)throw new Error("Módulo local no incluido en el paquete: "+id);const exports={};const pending=(async()=>{await factory(exports,spec=>load(resolve(id,spec)));return Object.freeze(exports);})();cache.set(id,pending);try{return await pending;}catch(error){cache.delete(id);throw error;}}
- window.EDModules=Object.freeze({import:load});
-})();
+ window.EDModules=Object.freeze({import:load});})();
