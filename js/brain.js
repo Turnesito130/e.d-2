@@ -23,14 +23,14 @@ function setEDTutorMode(enabled) {
 }
 
 async function getStructuredMemory() {
-  edMemoryStorePromise ||= import("./neural-core/memory-store.mjs")
+  edMemoryStorePromise ||= EDModules.import("./neural-core/memory-store.mjs")
     .then(({ createMemoryStore }) => createMemoryStore());
   return edMemoryStorePromise;
 }
 async function getMemoryAwarePrompt(text) {
   try {
     const memory = await getStructuredMemory();
-    edMemoryContextModule ||= await import("./neural-core/memory-context.mjs");
+    edMemoryContextModule ||= await EDModules.import("./neural-core/memory-context.mjs");
     return edMemoryContextModule.buildMemoryContext(text, memory);
   } catch (error) {
     console.warn("E.D. memory context unavailable:", error);
@@ -39,7 +39,7 @@ async function getMemoryAwarePrompt(text) {
 }
 async function getKnowledgeContext(text) {
   try {
-    edKnowledgeBasePromise ||= import("./neural-core/knowledge-base.mjs")
+    edKnowledgeBasePromise ||= EDModules.import("./neural-core/knowledge-base.mjs")
       .then(async ({ loadLocalKnowledgeBase }) => loadLocalKnowledgeBase());
     const knowledge = await edKnowledgeBasePromise;
     return knowledge.buildContext(text, { limit: 4, maxChars: 2600, minScore: 0.08 });
@@ -69,7 +69,7 @@ function setLocalModelStatus(message, progress) {
   if (fill && Number.isFinite(progress)) fill.style.width = Math.max(0, Math.min(100, progress * 100)) + "%";
 }
 async function getEDBrainProvider() {
-  edBrainProviderPromise ||= import("./neural-core/openjarvis-adapter.mjs").then(({ createEDOpenJarvisAdapter }) => createEDOpenJarvisAdapter({ tools: {
+  edBrainProviderPromise ||= EDModules.import("./neural-core/openjarvis-adapter.mjs").then(({ createEDOpenJarvisAdapter }) => createEDOpenJarvisAdapter({ tools: {
     calculate: async ({ expression }) => {
       const result = await calc(expression);
       return result === null ? "No pude interpretar el cálculo con seguridad." : result;
