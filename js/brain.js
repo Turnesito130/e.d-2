@@ -49,6 +49,20 @@ async function getKnowledgeContext(text) {
     return { context: "", sources: [] };
   }
 }
+function refreshEDArchitectureStats() {
+  const target = document.getElementById("edArchitectureStats");
+  if (!target || typeof edBrainProvider?.stats !== "function") return;
+  try {
+    const stats = edBrainProvider.stats();
+    target.textContent = "Motor: " + stats.engine
+      + " · Hechos enseñados: " + stats.facts
+      + " · Recuerdos: " + stats.memories
+      + " · Consultas registradas: " + stats.traces
+      + " · Correctas: " + stats.completed
+      + " · Fallidas: " + stats.failed
+      + ". El registro guarda métricas, no el texto de tus preguntas.";
+  } catch { target.textContent = "Las métricas locales todavía no están disponibles."; }
+}
 function setLocalModelStatus(message, progress) {
   const status = document.getElementById("edModelStatus");
   const fill = document.getElementById("edModelProgressFill");
@@ -77,6 +91,7 @@ async function loadEDLocalModel() {
     });
     edLocalModelReady = provider.ready;
     edLocalModelError = "";
+    refreshEDArchitectureStats();
     setLocalModelStatus("Cerebro propio activado. No se ha cargado ningún modelo externo.", 1);
     if (button) button.textContent = "Cerebro propio activado";
     return true;
@@ -99,7 +114,7 @@ function setupEDLocalModelControls() {
   if (!settings || document.getElementById("edModelPanel")) return;
   const panel = document.createElement("section");
   panel.id = "edModelPanel";
-  panel.innerHTML = '<h3>Cerebro propio de E.D.</h3><p>Núcleo cognitivo nativo: razonamiento lógico, cálculo verificable, memoria y aprendizaje local supervisado. No utiliza Qwen, modelos externos ni APIs de IA. Esta primera versión tiene comprensión lingüística limitada y se ampliará progresivamente.</p><button id="edLoadModel" type="button">Activar cerebro propio</button><p id="edModelStatus" role="status">El núcleo propio está preparado para activarse. No requiere descargas.</p><div id="edModelProgress" aria-label="Estado del cerebro"><div id="edModelProgressFill"></div></div>';
+  panel.innerHTML = '<h3>Cerebro propio de E.D.</h3><p>Núcleo cognitivo nativo: razonamiento lógico, cálculo verificable, memoria y aprendizaje local supervisado. No utiliza Qwen, modelos externos ni APIs de IA. Esta primera versión tiene comprensión lingüística limitada y se ampliará progresivamente.</p><button id="edLoadModel" type="button">Activar cerebro propio</button><p id="edModelStatus" role="status">El núcleo propio está preparado para activarse. No requiere descargas.</p><div id="edModelProgress" aria-label="Estado del cerebro"><div id="edModelProgressFill"></div></div><p id="edArchitectureStats" aria-live="polite">Métricas locales: pendientes de activar el cerebro.</p>';
   settings.appendChild(panel);
   document.getElementById("edLoadModel").addEventListener("click", loadEDLocalModel);
 }
@@ -202,7 +217,8 @@ async function ask(text, byText) {
     messages.push({ role: "user", content: text });
     const provider = await getEDBrainProvider();
     const answer = await provider.generate(messages);
-    if (!answer) throw new Error("El modelo no generó una respuesta.");
+    refreshEDArchitectureStats();
+    if (!answer) throw new Error("El núcleo cognitivo no generó una respuesta.");
     if (bub) bub.textContent = answer;
     showSub(answer);
     speak(answer);
