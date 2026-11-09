@@ -58,7 +58,8 @@ export function createLocalTransformerBrain({storage=null,config={}}={}){
     tokenizer=new SubwordTokenizer().fit(text,{vocabSize:cfg.vocabSize,minFrequency:2});
     model=new TransformerDecoder({...cfg,vocabSize:tokenizer.size});
    }
-   const allIds=tokenizer.encode(text);\n   const ids=allIds.slice(0,Math.max(256,Math.min(6000,Number(maxTrainingTokens)||5000)));
+   const allIds=tokenizer.encode(text);
+   const ids=allIds.slice(0,Math.max(256,Math.min(6000,Number(maxTrainingTokens)||5000)));
    if(ids.length<3)throw new Error("El corpus local es demasiado pequeño.");
    const before=evaluateTransformer(model,ids).loss;
    const result=await trainTransformer(model,ids,{epochs,learningRate:.012,batchSize:4,gradientClip:1,yieldEvery:20,shouldStop,onProgress});
