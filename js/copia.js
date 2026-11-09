@@ -83,3 +83,42 @@ exportButton.addEventListener("click", exportarMemoria);
 importButton.addEventListener("click", () => importInput.click());
 importInput.addEventListener("change", () => { if (importInput.files && importInput.files[0]) importarMemoria(importInput.files[0]); importInput.value = ""; });
 $("save").before(exportButton, importButton, importInput);
+
+async function buildEDMemoryBackupData() {
+  const structuredMemory = await getStructuredMemory();
+  return {
+    format: "ed2-full-backup", version: 2, fecha: new Date().toISOString(),
+    notas: memList(),
+    tarjetas: (() => { try { const a = JSON.parse(store.get("ed_cards") || "[]"); return Array.isArray(a) ? a : []; } catch (e) { return []; } })(),
+    memoriaEstructurada: structuredMemory.exportJSON()
+  };
+}
+async function mergeEDMemoryBackupData(data) {
+  try {
+    const valid = data && data.format === "ed2-full-backup" && data.version === 2
+      && Array.isArray(data.notas) && Array.isArray(data.tarjetas)
+      && typeof data.memoriaEstructurada === "string";
+    if (!valid) throw new Error("formato de copia no válido");
+    if (!window.confirm("¿Quieres combinar la copia de Google Drive con la memoria actual de este dispositivo? No se borrará la memoria existente.")) return false;
+    const notes = data.notas.filter(x => typeof x === "string").map(x => x.trim()).filter(Boolean);
+    const cards = data.tarjetas.filter(x => x && typeof x.p === "string" && typeof x.r === "string");
+    const mergedNotes = [...new Set([...memList(), ...notes])].slice(-100);
+    let oldCards = [];
+    try { const parsed = JSON.parse(store.get("ed_cards") || "[]"); if (Array.isArray(parsed)) oldCards = parsed; } catch (e) {}
+    const mergedCards = [...oldCards, ...cards].slice(-100);
+    memSave(mergedNotes);
+    store.set("ed_cards", JSON.stringify(mergedCards));
+    const memory = await getStructuredMemory();
+    const structuredCount = memory.importJSON(data.memoriaEstructurada, { consent: true });
+    showSub("Memoria recuperada y combinada: " + mergedNotes.length + " notas, " + mergedCards.length + " tarjetas y " + structuredCount + " recuerdos estructurados nuevos.");
+    return true;
+  } catch (error) { showSub("No pude combinar la copia: " + (error?.message || String(error))); return false; }
+}
+const driveSyncButton = document.createElement("button"), driveRestoreButton = document.createElement("button");
+driveSyncButton.type = driveRestoreButton.type = "button";
+driveSyncButton.className = driveRestoreButton.className = "sbtn";
+driveSyncButton.textContent = "Sincronizar memoria con Google Drive";
+driveRestoreButton.textContent = "Recuperar memoria de Google Drive";
+driveSyncButton.addEventListener("click", () => syncEDMemoryToGoogle());
+driveRestoreButton.addEventListener("click", () => restoreEDMemoryFromGoogle());
+$("save").before(driveSyncButton, driveRestoreButton);
