@@ -28,7 +28,7 @@ function sampleToken(logits,temperature=.72,topK=8){
 }
 export function createLocalTransformerBrain({storage=null,config={}}={}){
  let backend=storage;try{if(!backend)backend=globalThis.localStorage||null}catch{backend=null;}
- const {maxTrainingTokens=1200,...modelConfig}=config;
+ const {maxTrainingTokens=5000,...modelConfig}=config;
  const cfg={vocabSize:128,dModel:16,heads:2,layers:1,maxSeqLen:32,seed:20261109,...modelConfig};
  let tokenizer=null,model=null,training=false,trainedAt=null,stats=null;
  function persist(){
@@ -58,7 +58,7 @@ export function createLocalTransformerBrain({storage=null,config={}}={}){
     tokenizer=new SubwordTokenizer().fit(text,{vocabSize:cfg.vocabSize,minFrequency:2});
     model=new TransformerDecoder({...cfg,vocabSize:tokenizer.size});
    }
-   const ids=tokenizer.encode(text);
+   const allIds=tokenizer.encode(text);\n   const ids=allIds.slice(0,Math.max(256,Math.min(6000,Number(maxTrainingTokens)||5000)));
    if(ids.length<3)throw new Error("El corpus local es demasiado pequeño.");
    const before=evaluateTransformer(model,ids).loss;
    const result=await trainTransformer(model,ids,{epochs,learningRate:.012,batchSize:4,gradientClip:1,yieldEvery:20,shouldStop,onProgress});
