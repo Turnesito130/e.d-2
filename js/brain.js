@@ -82,14 +82,14 @@ async function getEDBrainProvider() {
     memory_search: async ({ query }) => {
       const memory = await getStructuredMemory();
       const found = memory.search(query, { limit: 5, includeUncertain: true });
-      return found.length ? found.map(item => item.content + " (tipo: " + item.type + ", confianza: " + Math.round(item.confidence * 100) + "%)").join("\\n") : "No he encontrado recuerdos relacionados.";
+      return found.length ? found.map(item => item.content + " (tipo: " + item.type + ", confianza: " + Math.round(item.confidence * 100) + "%)").join("\n") : "No he encontrado recuerdos relacionados.";
     },
     search: async ({ query }) => {
       openUrl("https://www.google.com/search?q=" + encodeURIComponent(query), "la búsqueda");
       return "He preparado la búsqueda en Google.";
     },
     open_url: async ({ url }) => {
-      if (!/^https?:\\/\\//i.test(url)) throw new Error("Dirección no permitida.");
+      if (!/^https?:\/\//i.test(url)) throw new Error("Dirección no permitida.");
       openUrl(url, "la página solicitada");
       return "He preparado la apertura de la página.";
     },
