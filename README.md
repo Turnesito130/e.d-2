@@ -74,3 +74,6 @@ La aplicación y el núcleo no necesitan Internet para el razonamiento simbólic
 ## Sincronización opcional de memoria entre dispositivos
 
 En Ajustes hay dos controles nuevos: **Sincronizar memoria con Google Drive** y **Recuperar memoria de Google Drive**. Requieren conectar Google y autorizar el permiso `drive.appdata`. La copia se guarda en el espacio privado de datos de la aplicación (`appDataFolder`), no como un documento visible en la carpeta normal de Drive. La sincronización es manual: pulsa sincronizar en el dispositivo de origen y recuperar en el otro. La recuperación combina los datos y pide confirmación; no borra la memoria local. El cerebro y la inferencia siguen ejecutándose localmente. La primera autorización puede exigir volver a consentir los nuevos permisos de Google.
+
+
+**Nota sobre Google OAuth:** el modo `file://` permite ejecutar el núcleo local, pero Google OAuth requiere un origen web HTTPS autorizado en la configuración del cliente OAuth. Para usar Calendar, Gmail, Drive o la sincronización entre dispositivos, E.D. debe abrirse desde un despliegue HTTPS (por ejemplo, GitHub Pages) cuyo dominio esté autorizado en Google Cloud. No se debe pegar una clave secreta en el HTML; el ID de cliente OAuth no es una contraseña.
