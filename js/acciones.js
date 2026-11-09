@@ -7,7 +7,7 @@ function openUrl(url,label){if(!window.open(url,"_blank"))showLink(url,"Abrir "+
 function reply(q,text,byText){const long=text.length>160;$("you").textContent=q;showSub(long?text.slice(0,157)+"…":text);if(byText||long){addMsg("u",q);addMsg("e",text);if(long)$("chat").classList.add("open");}speak(text);return true;}
 async function calc(x){
   try {
-    const { calculateNaturalExpression } = await import("./neural-core/natural-calculator.js");
+    const { calculateNaturalExpression } = await EDModules.import("./neural-core/natural-calculator.js");
     const result = calculateNaturalExpression(String(x)).value;
     return String(Math.round(result * 1e6) / 1e6).replace(".", ",");
   } catch (error) {
