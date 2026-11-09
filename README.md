@@ -77,3 +77,8 @@ En Ajustes hay dos controles nuevos: **Sincronizar memoria con Google Drive** y 
 
 
 **Nota sobre Google OAuth:** el modo `file://` permite ejecutar el núcleo local, pero Google OAuth requiere un origen web HTTPS autorizado en la configuración del cliente OAuth. Para usar Calendar, Gmail, Drive o la sincronización entre dispositivos, E.D. debe abrirse desde un despliegue HTTPS (por ejemplo, GitHub Pages) cuyo dominio esté autorizado en Google Cloud. No se debe pegar una clave secreta en el HTML; el ID de cliente OAuth no es una contraseña.
+
+
+## Conocimiento local sin conexión
+
+La biblioteca inicial de E.D. contiene 30 fichas educativas aprobadas en español, empaquetadas dentro del JavaScript que se carga desde `index.html`. Incluye ciencia, matemáticas, historia, tecnología, programación y lenguaje. Así, la recuperación de estas fichas no utiliza `fetch` ni necesita conexión, y también funciona cuando se abre el archivo local desde ChromeOS. El núcleo responde con el contenido encontrado y su identificador de fuente; si no encuentra material suficiente, debe reconocerlo en lugar de inventar. La biblioteca puede ampliarse con nuevas fichas revisadas.
