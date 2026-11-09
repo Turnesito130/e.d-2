@@ -1,10 +1,15 @@
 import { createNativeCognition } from "./native-cognition.mjs";
-export function createLocalBrainProvider({cognition=null}={}){
- const brain=cognition||createNativeCognition();let ready=false,loading=null;
- return Object.freeze({id:"ed-native-cognition",get ready(){return ready},
- async checkSupport(){return {supported:true,reason:"Funciona en JavaScript estándar; no requiere WebGPU."}},
- async load(onProgress=()=>{}){if(ready)return true;if(loading)return loading;loading=Promise.resolve().then(async()=>{onProgress({text:"Preparando el cerebro cognitivo propio…",progress:.5});await brain.load();ready=true;onProgress({text:"Cerebro propio activado en este dispositivo.",progress:1});return true});try{return await loading}finally{loading=null}},
- async generate(ms){if(!ready)throw new Error("El cerebro propio todavía no está activado.");if(!Array.isArray(ms)||!ms.length)throw new TypeError("Se necesita una conversación válida.");return brain.generate(ms)},
- learn:(...a)=>brain.learn(...a),recall:(...a)=>brain.recall(...a)
+import { createLocalTransformerBrain } from "./local-transformer-brain.mjs";
+function lastUser(messages){for(let i=(messages?.length||0)-1;i>=0;i--)if(messages[i]?.role==="user"&&typeof messages[i].content==="string")return messages[i].content.trim();return "";}
+export function createLocalBrainProvider({cognition=null,storage=null}={}){
+ const brain=cognition||createNativeCognition({storage});
+ const neural=createLocalTransformerBrain({storage});
+ let ready=false,loading=null;
+ return Object.freeze({id:"ed-native-cognition+ed-transformer",get ready(){return ready},
+ async checkSupport(){return {supported:true,reason:"El núcleo simbólico y el Transformer propio funcionan en JavaScript/WebAssembly CPU; no requieren WebGPU ni servicios de IA externos."}},
+ async load(onProgress=()=>{}){if(ready)return true;if(loading)return loading;loading=Promise.resolve().then(async()=>{onProgress({text:"Preparando el cerebro cognitivo propio…",progress:.25});await brain.load();onProgress({text:"Buscando un cerebro neuronal entrenado en este dispositivo…",progress:.55});await neural.load();ready=true;onProgress({text:neural.ready?"Cerebro propio y pesos neuronales locales cargados.":"Cerebro simbólico propio activo; el Transformer todavía no está entrenado.",progress:1});return true});try{return await loading}finally{loading=null}},
+ async generate(ms){if(!ready)throw new Error("El cerebro propio todavía no está activado.");const answer=await brain.generate(ms);if(/^Todavía no tengo conocimientos suficientes/i.test(answer)&&neural.ready){const proposal=neural.generate(lastUser(ms));if(proposal)return "Mi Transformer propio propone esta respuesta experimental (todavía no verificada):\n"+proposal;}return answer},
+ learn:(...a)=>brain.learn(...a),recall:(...a)=>brain.recall(...a),
+ trainNeural:(...a)=>neural.train(...a),neuralStats:()=>neural.getStats(),clearNeural:()=>neural.clear()
  });
 }
