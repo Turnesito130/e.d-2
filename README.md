@@ -4,12 +4,7 @@ E.D.-2 desarrolla un asistente personal cuyo cerebro conversacional no depende d
 
 ## Arquitectura actual
 
-El chat utiliza `js/neural-core/native-cognition.mjs`: un núcleo cognitivo nativo escrito en JavaScript. Combina:
-- cálculo matemático determinista;
-- inferencia simbólica por encadenamiento de relaciones que el usuario ha enseñado;
-- aprendizaje explícito y memoria local, con funciones para consultar y olvidar;
-- recuperación de documentos locales revisados;
-- planificación acotada y herramientas registradas mediante Agent Runtime.
+El chat utiliza primero `js/neural-core/native-cognition.mjs`: un núcleo cognitivo nativo escrito en JavaScript. Combina cálculo matemático determinista, inferencia simbólica, aprendizaje explícito, memoria local, recuperación de documentos revisados y herramientas registradas. Si ese núcleo no conoce una respuesta y existe un checkpoint entrenado en el dispositivo, `js/neural-core/brain-provider.mjs` puede consultar como respaldo el Transformer experimental propio (`local-transformer-brain.mjs`). Sus propuestas se etiquetan como no verificadas y se filtran; no sustituyen las respuestas fiables del núcleo simbólico.
 
 El núcleo funciona sin WebGPU, descargas de modelos, CDNs ni servicios de inferencia. La voz del navegador es una función de interfaz, no el cerebro.
 
@@ -17,7 +12,7 @@ El núcleo funciona sin WebGPU, descargas de modelos, CDNs ni servicios de infer
 
 Esta implementación es una IA simbólica temprana, no un gran modelo lingüístico. Su comprensión del español es limitada, no puede responder de forma fiable a cualquier pregunta y no debe presentarse como comparable a ChatGPT. Aprende hechos que se le enseñan explícitamente; no modifica por sí sola sus pesos neuronales ni aprende automáticamente de cada conversación. La memoria de aprendizaje actual vive en el almacenamiento local de cada navegador y no se sincroniza entre dispositivos.
 
-El repositorio conserva un laboratorio experimental de redes neuronales propias en `js/neural-core/` (tokenizador BPE, Transformer pequeño, entrenamiento y evaluación). Ese laboratorio no está conectado como generador del chat. Un Transformer inicializado al azar no es un modelo inteligente: necesitará un corpus grande y revisado, entrenamiento, pruebas reservadas y recursos de cálculo.
+El repositorio incluye un Transformer pequeño propio, tokenizador BPE, retropropagación, entrenamiento y evaluación. El chat ya lo puede consultar como respaldo únicamente cuando el núcleo simbólico no sabe responder y el Transformer tiene pesos entrenados guardados localmente. Un Transformer inicializado al azar no es un modelo inteligente: el corpus actual es pequeño y educativo, así que entrenarlo no garantiza conversación general ni respuestas correctas. Hace falta ampliar datos revisados, separar datos de evaluación y medir calidad, tiempo y memoria en el Acer real.
 
 ## Principios de ingeniería
 
@@ -47,6 +42,10 @@ La rama incorpora `js/neural-core/openjarvis-adapter.mjs`, una capa de integraci
 - **Learning:** hechos enseñados explícitamente y trazas locales de métricas. Las trazas no guardan el texto de las preguntas ni de las respuestas y no entrenan pesos automáticamente.
 
 La capa se conecta al proveedor cognitivo que usa el chat. No convierte por sí sola el núcleo simbólico en un modelo lingüístico general. La compatibilidad con el Acer físico y el comportamiento de almacenamiento al abrir archivos locales deben comprobarse en ese dispositivo.
+
+## Referencia externa de investigación: LLMs-from-scratch
+
+Se ha seleccionado [rasbt/LLMs-from-scratch](https://github.com/rasbt/LLMs-from-scratch) como referencia técnica para estudiar tokenización, atención, preentrenamiento y ajuste por instrucciones. No se incorpora como dependencia ni se ejecuta dentro de E.D.: está implementado en Python/PyTorch y sus notebooks no son directamente ejecutables al abrir `index.html` en ChromeOS sin un entorno Python compatible. E.D. mantiene su implementación neuronal en JavaScript para respetar el requisito de funcionar desde el navegador del Acer sin Linux ni servicios externos.
 
 
 ## Ejecución desde Archivos de ChromeOS
