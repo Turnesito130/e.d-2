@@ -52,3 +52,8 @@ La capa se conecta al proveedor cognitivo que usa el chat. No convierte por sí 
 ## Ejecución desde Archivos de ChromeOS
 
 Para permitir que el chat funcione al abrir `index.html` directamente desde la aplicación Archivos, la página carga `js/neural-core/chromebook-file-bundle.js`. Ese archivo reúne los módulos ES del núcleo en un cargador JavaScript clásico, evitando las importaciones `.mjs` que pueden quedar bloqueadas por el origen `file://` del navegador. El Service Worker no puede instalarse desde `file://`; la interfaz y el cerebro local no lo necesitan para ejecutarse, aunque las funciones PWA y la caché instalable sí requieren HTTPS. La prueba del bundle se ha ejecutado en un entorno JavaScript aislado; falta verificarlo en el Chromebook físico.
+
+
+## Conexiones externas disponibles
+
+El conector Google existente puede autorizar, mediante el consentimiento OAuth del usuario, lectura de mensajes no leídos de Gmail, tareas de Google Classroom, metadatos de archivos de Drive y eventos próximos de Google Calendar. Los permisos son de solo lectura. Se necesita configurar un ID de cliente OAuth de Google en el proyecto y autorizar la cuenta en el navegador. Otros servicios del panel se abren como páginas web; no se afirma que estén conectados por API ni que E.D. pueda leer sus datos.
