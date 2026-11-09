@@ -57,3 +57,15 @@ Para permitir que el chat funcione al abrir `index.html` directamente desde la a
 ## Conexiones externas disponibles
 
 El conector Google existente puede autorizar, mediante el consentimiento OAuth del usuario, lectura de mensajes no leídos de Gmail, tareas de Google Classroom, metadatos de archivos de Drive y eventos próximos de Google Calendar. Los permisos son de solo lectura. Se necesita configurar un ID de cliente OAuth de Google en el proyecto y autorizar la cuenta en el navegador. Otros servicios del panel se abren como páginas web; no se afirma que estén conectados por API ni que E.D. pueda leer sus datos.
+
+
+## Primer uso en Acer Chromebook
+
+1. Abre la rama `arquitectura/cerebro-propio-0.1` en GitHub y descarga su ZIP desde **Code → Download ZIP**.
+2. En la aplicación Archivos de ChromeOS, extrae el ZIP.
+3. Abre `index.html` con Chrome. El paquete `chromebook-file-bundle.js` evita depender de importaciones de módulos que pueden bloquearse en direcciones `file://`.
+4. Toca la esfera para activar el núcleo propio. Para escribir, abre el chat con el icono del lápiz.
+5. Para enseñar un dato, escribe por ejemplo: `Aprende que fotosíntesis significa proceso por el que las plantas transforman luz en energía química`. Para calcular: `Calcula 12 por 3`.
+6. El botón **G** inicia la autorización de Google. Hace falta un ID de cliente OAuth válido y aceptar los permisos de solo lectura. Después E.D. puede consultar Gmail no leído, Classroom, metadatos de Drive y eventos de Calendar.
+
+La aplicación y el núcleo no necesitan Internet para el razonamiento simbólico, los cálculos y la memoria local. Internet sí es necesario para Google, búsquedas y otras páginas externas. El permiso de micrófono depende de ChromeOS y de las políticas del dispositivo. No se ha realizado una prueba física en el Acer; si ChromeOS bloquea el micrófono o el almacenamiento local, esas funciones necesitarán un ajuste específico.
