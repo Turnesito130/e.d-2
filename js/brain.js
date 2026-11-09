@@ -56,7 +56,7 @@ function setLocalModelStatus(message, progress) {
   if (fill && Number.isFinite(progress)) fill.style.width = Math.max(0, Math.min(100, progress * 100)) + "%";
 }
 async function getEDBrainProvider() {
-  edBrainProviderPromise ||= import("./neural-core/brain-provider.mjs").then(({ createLocalBrainProvider }) => createLocalBrainProvider());
+  edBrainProviderPromise ||= import("./neural-core/openjarvis-adapter.mjs").then(({ createEDOpenJarvisAdapter }) => createEDOpenJarvisAdapter());
   edBrainProvider = await edBrainProviderPromise;
   return edBrainProvider;
 }
