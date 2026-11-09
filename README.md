@@ -35,3 +35,15 @@ El repositorio conserva un laboratorio experimental de redes neuronales propias 
 3. Conectar progresivamente el Transformer propio, solo cuando supere pruebas de calidad frente al núcleo actual.
 4. Medir precisión, generalización, latencia y consumo en el equipo real.
 5. Mejorar memoria y sincronización segura entre dispositivos sin delegar el razonamiento en una IA externa.
+
+
+## Adaptación de arquitectura OpenJarvis para Chromebook
+
+La rama incorpora `js/neural-core/openjarvis-adapter.mjs`, una capa de integración inspirada en los cinco pilares documentados por OpenJarvis y adaptada al núcleo propio de E.D.:
+- **Intelligence:** identidad y capacidades del núcleo simbólico nativo de E.D.; no se elige un modelo de terceros.
+- **Engine:** ejecución JavaScript dentro del navegador ChromeOS, sin Ollama, Python, WebGPU ni descarga de pesos.
+- **Agents:** Agent Runtime acotado, registro explícito de herramientas y clasificación de riesgo.
+- **Memory:** memoria estructurada local con consentimiento, procedencia y nivel de confianza.
+- **Learning:** hechos enseñados explícitamente y trazas locales de métricas. Las trazas no guardan el texto de las preguntas ni de las respuestas y no entrenan pesos automáticamente.
+
+La capa se conecta al proveedor cognitivo que usa el chat. No convierte por sí sola el núcleo simbólico en un modelo lingüístico general. La compatibilidad con el Acer físico y el comportamiento de almacenamiento al abrir archivos locales deben comprobarse en ese dispositivo.
