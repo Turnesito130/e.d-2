@@ -14,7 +14,7 @@ const clean=x=>String(x??"").trim();
 function corpusFromDocs(docs){
  return docs.map(doc=>{
   const title=clean(doc.title);
-  const first=clean(doc.text).split(/(?<=[.!?])\s+/)[0]||clean(doc.text);
+  const first=(clean(doc.text).split(/(?<=[.!?])\s+/)[0]||clean(doc.text)).slice(0,90);
   return "Pregunta: ¿Qué es "+title+"?\nRespuesta: "+first+"\n";
  }).join("\n");
 }
