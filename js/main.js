@@ -3,7 +3,7 @@ let pendingShare = false, pendingQ = "";
 async function tap() {
   if (!started) {
     started = true; $("st").textContent = "te escucho"; startRec(); startMeter();
-    loadOwnBrain().then(b => showSub(b ? "Cerebro propio cargado." : "Modo local activo. El cerebro todavía necesita entrenamiento.")).catch(e => showSub(e.message));
+    loadEDLocalModel().then(b => showSub(b ? "Cerebro propio cargado y listo." : "Modo local activo; el cerebro propio no se ha podido activar.")).catch(e => showSub("No se pudo activar el cerebro propio: " + e.message));
     speak("Hola, soy E.D. Funcionando en modo local. Te escucho.");
   } else if (pendingShare) {
     pendingShare = false; await shareScreen();
