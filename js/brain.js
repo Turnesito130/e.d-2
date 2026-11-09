@@ -39,8 +39,8 @@ async function getMemoryAwarePrompt(text) {
 }
 async function getKnowledgeContext(text) {
   try {
-    edKnowledgeBasePromise ||= EDModules.import("./neural-core/knowledge-base.mjs")
-      .then(async ({ loadLocalKnowledgeBase }) => loadLocalKnowledgeBase());
+    edKnowledgeBasePromise ||= EDModules.import("./neural-core/curated-knowledge.mjs")
+      .then(({ createCuratedKnowledgeBase }) => createCuratedKnowledgeBase());
     const knowledge = await edKnowledgeBasePromise;
     return knowledge.buildContext(text, { limit: 4, maxChars: 2600, minScore: 0.08 });
   } catch (error) {
