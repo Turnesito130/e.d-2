@@ -28,7 +28,7 @@ function sampleToken(logits,temperature=.72,topK=8){
 }
 export function createLocalTransformerBrain({storage=null,config={}}={}){
  let backend=storage;try{if(!backend)backend=globalThis.localStorage||null}catch{backend=null;}
- const cfg={vocabSize:128,dModel:16,heads:2,layers:1,maxSeqLen:32,seed:20261109,...config};
+ const {maxTrainingTokens=1200,...modelConfig}=config;\n const cfg={vocabSize:128,dModel:16,heads:2,layers:1,maxSeqLen:32,seed:20261109,...modelConfig};
  let tokenizer=null,model=null,training=false,trainedAt=null,stats=null;
  function persist(){
   if(!backend)return false;
