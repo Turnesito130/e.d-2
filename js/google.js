@@ -1,6 +1,6 @@
 /* ev · Gmail, Classroom y Drive (solo lectura) */
 let gtoken = null;
-const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/calendar.readonly";
+const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/drive.appdata https://www.googleapis.com/auth/calendar.readonly";
 function loadGsi() {
   return new Promise((ok, no) => {
     if (window.google && google.accounts) return ok();
@@ -75,6 +75,63 @@ async function driveSearch(q) {
   if (!f.files || !f.files.length) return "No encontré archivos con ese nombre.";
   showLink(f.files[0].webViewLink, "Abrir " + f.files[0].name);
   return f.files.map(x => x.name).join("\n");
+}
+
+async function driveAppDataFile() {
+  const q = encodeURIComponent("name='ed2-memory-sync.json' and 'appDataFolder' in parents and trashed=false");
+  const data = await gget("https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=" + q + "&pageSize=5&fields=files(id,name,modifiedTime)");
+  return (data.files || []).sort((a,b) => String(b.modifiedTime || "").localeCompare(String(a.modifiedTime || "")))[0] || null;
+}
+async function driveUploadAppData(payload) {
+  if (!gtoken) throw new Error("Conecta Google primero con el botón G.");
+  const body = JSON.stringify(payload);
+  const existing = await driveAppDataFile();
+  if (existing) {
+    const response = await fetch("https://www.googleapis.com/upload/drive/v3/files/" + encodeURIComponent(existing.id) + "?uploadType=media", {
+      method: "PATCH", headers: { Authorization: "Bearer " + gtoken, "Content-Type": "application/json" }, body
+    });
+    if (!response.ok) throw new Error("Drive " + response.status);
+    return response.json();
+  }
+  const boundary = "ed2_sync_" + Math.random().toString(36).slice(2);
+  const metadata = { name: "ed2-memory-sync.json", mimeType: "application/json", parents: ["appDataFolder"] };
+  const multipart = "--" + boundary + "\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"
+    + JSON.stringify(metadata) + "\r\n--" + boundary + "\r\nContent-Type: application/json\r\n\r\n"
+    + body + "\r\n--" + boundary + "--";
+  const response = await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart", {
+    method: "POST", headers: { Authorization: "Bearer " + gtoken, "Content-Type": "multipart/related; boundary=" + boundary }, body: multipart
+  });
+  if (!response.ok) throw new Error("Drive " + response.status);
+  return response.json();
+}
+async function driveDownloadAppData() {
+  if (!gtoken) throw new Error("Conecta Google primero con el botón G.");
+  const file = await driveAppDataFile();
+  if (!file) return null;
+  const response = await fetch("https://www.googleapis.com/drive/v3/files/" + encodeURIComponent(file.id) + "?alt=media", {
+    headers: { Authorization: "Bearer " + gtoken }
+  });
+  if (!response.ok) throw new Error("Drive " + response.status);
+  return response.json();
+}
+async function syncEDMemoryToGoogle() {
+  try {
+    if (!gtoken) { showSub("Primero conecta Google con el botón G."); return false; }
+    if (typeof buildEDMemoryBackupData !== "function") throw new Error("La copia local todavía no está preparada.");
+    const payload = await buildEDMemoryBackupData();
+    await driveUploadAppData(payload);
+    showSub("Memoria de E.D. sincronizada en el espacio privado de la aplicación en Google Drive.");
+    return true;
+  } catch (error) { showSub("No pude sincronizar la memoria: " + (error?.message || String(error))); return false; }
+}
+async function restoreEDMemoryFromGoogle() {
+  try {
+    if (!gtoken) { showSub("Primero conecta Google con el botón G."); return false; }
+    const payload = await driveDownloadAppData();
+    if (!payload) { showSub("No hay una copia de E.D. en Google Drive todavía."); return false; }
+    if (typeof mergeEDMemoryBackupData !== "function") throw new Error("La importación local todavía no está preparada.");
+    return await mergeEDMemoryBackupData(payload);
+  } catch (error) { showSub("No pude recuperar la memoria: " + (error?.message || String(error))); return false; }
 }
 async function googleCmd(n) {
   const gm = /(correo|gmail|mail)/.test(n) && /(leer|lee|tengo|nuevo|sin leer|revisa|mira)/.test(n);
