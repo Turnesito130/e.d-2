@@ -86,6 +86,7 @@ async function googleCmd(n) {
   try {
     if (gm) return await gmailUnread();
     if (cl) return await classroomTasks();
+    if (cal) return await calendarUpcoming();
     return await driveSearch(dr[1]);
   } catch (e) { return "No pude leer Google: " + e.message; }
 }
