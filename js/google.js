@@ -1,6 +1,6 @@
 /* ev · Gmail, Classroom y Drive (solo lectura) */
 let gtoken = null;
-const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/drive.metadata.readonly";
+const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/classroom.courses.readonly https://www.googleapis.com/auth/classroom.coursework.me.readonly https://www.googleapis.com/auth/drive.metadata.readonly https://www.googleapis.com/auth/calendar.readonly";
 function loadGsi() {
   return new Promise((ok, no) => {
     if (window.google && google.accounts) return ok();
@@ -53,6 +53,22 @@ async function classroomTasks() {
   }
   out.sort((a, b) => a.d - b.d);
   return out.length ? out.slice(0, 6).map(x => x.s).join("\n") : "No veo tareas pendientes con fecha.";
+}
+async function calendarUpcoming() {
+  const now = new Date(), end = new Date(now.getTime() + 7 * 86400000);
+  const params = new URLSearchParams({
+    timeMin: now.toISOString(), timeMax: end.toISOString(),
+    maxResults: "10", orderBy: "startTime", singleEvents: "true",
+    fields: "items(summary,start,end,htmlLink)"
+  });
+  const data = await gget("https://www.googleapis.com/calendar/v3/calendars/primary/events?" + params.toString());
+  const events = data.items || [];
+  if (!events.length) return "No veo eventos próximos en los próximos siete días.";
+  return events.map(event => {
+    const start = event.start?.dateTime || event.start?.date || "";
+    const date = start ? new Date(start).toLocaleString("es-ES", { dateStyle: "short", timeStyle: event.start?.dateTime ? "short" : undefined }) : "Fecha sin especificar";
+    return date + ": " + (event.summary || "Evento sin título");
+  }).join("\n");
 }
 async function driveSearch(q) {
   const f = await gget("https://www.googleapis.com/drive/v3/files?pageSize=5&fields=files(name,webViewLink)&q=" + encodeURIComponent("name contains '" + q.replace(/'/g, "") + "' and trashed=false"));
