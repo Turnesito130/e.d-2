@@ -47,3 +47,8 @@ La rama incorpora `js/neural-core/openjarvis-adapter.mjs`, una capa de integraci
 - **Learning:** hechos enseñados explícitamente y trazas locales de métricas. Las trazas no guardan el texto de las preguntas ni de las respuestas y no entrenan pesos automáticamente.
 
 La capa se conecta al proveedor cognitivo que usa el chat. No convierte por sí sola el núcleo simbólico en un modelo lingüístico general. La compatibilidad con el Acer físico y el comportamiento de almacenamiento al abrir archivos locales deben comprobarse en ese dispositivo.
+
+
+## Ejecución desde Archivos de ChromeOS
+
+Para permitir que el chat funcione al abrir `index.html` directamente desde la aplicación Archivos, la página carga `js/neural-core/chromebook-file-bundle.js`. Ese archivo reúne los módulos ES del núcleo en un cargador JavaScript clásico, evitando las importaciones `.mjs` que pueden quedar bloqueadas por el origen `file://` del navegador. El Service Worker no puede instalarse desde `file://`; la interfaz y el cerebro local no lo necesitan para ejecutarse, aunque las funciones PWA y la caché instalable sí requieren HTTPS. La prueba del bundle se ha ejecutado en un entorno JavaScript aislado; falta verificarlo en el Chromebook físico.
