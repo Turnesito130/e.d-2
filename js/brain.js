@@ -59,7 +59,8 @@ function refreshEDArchitectureStats() {
       + " · Consultas registradas: " + stats.traces
       + " · Correctas: " + stats.completed
       + " · Fallidas: " + stats.failed
-      + ". El registro guarda métricas, no el texto de tus preguntas.";
+      + ". El registro guarda métricas, no el texto de tus preguntas."
+      + (stats.neural?.ready ? " · Transformer propio entrenado: " + stats.neural.tokens + " tokens, pérdida " + stats.neural.lossAfter : " · Transformer propio: pendiente de entrenamiento");
   } catch { target.textContent = "Las métricas locales todavía no están disponibles."; }
 }
 function setLocalModelStatus(message, progress) {
@@ -103,6 +104,27 @@ async function getEDBrainProvider() {
   return edBrainProvider;
 }
 
+async function trainEDNeuralBrain() {
+  const button = document.getElementById("edTrainNeural");
+  const status = document.getElementById("edNeuralStatus");
+  if (button) button.disabled = true;
+  if (status) status.textContent = "Preparando el entrenamiento local en la CPU de este Chromebook…";
+  try {
+    const provider = await getEDBrainProvider();
+    const result = await provider.trainNeural({ epochs: 1, onProgress: report => {
+      if (status) status.textContent = report.text
+        || ("Época " + (report.epoch || 1) + " · paso " + (report.step || 0)
+          + (Number.isFinite(report.loss) ? " · pérdida " + report.loss.toFixed(4) : ""));
+    }});
+    if (status) status.textContent = (result.saved ? "Pesos guardados localmente. " : "Entrenamiento terminado, pero el navegador no permitió guardar los pesos. ")
+      + "Ejemplos: " + result.examples + " · tokens: " + result.tokens
+      + " · pasos: " + result.steps + " · pérdida: " + result.lossBefore + " → " + result.lossAfter
+      + ". Las respuestas neuronales seguirán siendo experimentales y no verificadas.";
+    refreshEDArchitectureStats();
+  } catch (error) {
+    if (status) status.textContent = "No se pudo entrenar el Transformer propio: " + (error?.message || String(error));
+  } finally { if (button) button.disabled = false; }
+}
 async function loadEDLocalModel() {
   if (edLocalModelReady) return true;
   if (edLocalModelLoading) return false;
@@ -142,9 +164,10 @@ function setupEDLocalModelControls() {
   if (!settings || document.getElementById("edModelPanel")) return;
   const panel = document.createElement("section");
   panel.id = "edModelPanel";
-  panel.innerHTML = '<h3>Cerebro propio de E.D.</h3><p>Núcleo cognitivo nativo: razonamiento lógico, cálculo verificable, memoria y aprendizaje local supervisado. No utiliza Qwen, modelos externos ni APIs de IA. Esta primera versión tiene comprensión lingüística limitada y se ampliará progresivamente.</p><button id="edLoadModel" type="button">Activar cerebro propio</button><p id="edModelStatus" role="status">El núcleo propio está preparado para activarse. No requiere descargas.</p><div id="edModelProgress" aria-label="Estado del cerebro"><div id="edModelProgressFill"></div></div><p id="edArchitectureStats" aria-live="polite">Métricas locales: pendientes de activar el cerebro.</p>';
+  panel.innerHTML = '<h3>Cerebro propio de E.D.</h3><p>Núcleo cognitivo nativo: razonamiento lógico, cálculo verificable, memoria y aprendizaje local supervisado. No utiliza Qwen, modelos externos ni APIs de IA. Esta primera versión tiene comprensión lingüística limitada y se ampliará progresivamente.</p><button id="edLoadModel" type="button">Activar cerebro propio</button><p id="edModelStatus" role="status">El núcleo propio está preparado para activarse. No requiere descargas.</p><div id="edModelProgress" aria-label="Estado del cerebro"><div id="edModelProgressFill"></div></div><p id="edArchitectureStats" aria-live="polite">Métricas locales: pendientes de activar el cerebro.</p><h4>Aprendizaje neuronal propio</h4><p>Entrena un pequeño Transformer creado por E.D. desde cero usando las fichas locales. El entrenamiento se ejecuta en la CPU de este dispositivo; no descarga pesos ni usa otra IA.</p><button id="edTrainNeural" type="button">Entrenar cerebro neuronal propio</button><p id="edNeuralStatus" role="status">Todavía no hay pesos neuronales entrenados en este dispositivo.</p>';
   settings.appendChild(panel);
   document.getElementById("edLoadModel").addEventListener("click", loadEDLocalModel);
+  document.getElementById("edTrainNeural").addEventListener("click", trainEDNeuralBrain);
 }
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", setupEDLocalModelControls);
 else setupEDLocalModelControls();
