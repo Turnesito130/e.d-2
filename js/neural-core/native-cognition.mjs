@@ -9,6 +9,8 @@ function score(q,t){const a=words(q).filter(x=>!STOP.has(x));if(!a.length)return
 function latest(ms){for(let i=ms.length-1;i>=0;i--)if(ms[i]?.role==="user"&&typeof ms[i].content==="string")return ms[i].content.trim();return ""}
 function sys(ms){return ms.filter(x=>x?.role==="system").map(x=>x.content||"").join("\n")}
 function docs(s){const i=s.indexOf("CONOCIMIENTO LOCAL RECUPERADO");if(i<0)return [];return s.slice(i).split(/\n\[Fuente /).slice(1).map(b=>{const l=b.split("\n");return {source:l[0].replace(/\].*$/,"").trim(),text:l.slice(1).join(" ").trim()}}).filter(x=>x.text)}
+function memoryDocs(s){return String(s||"").split(/\r?\n/).map(line=>{const m=line.match(/^\s*-\s*\[([^\]]+)\]\s*(.+)$/);return m?{source:m[1].trim(),text:m[2].trim()}:null}).filter(Boolean)}
+
 export function createNativeCognition({storage=null}={}){
  const target=storageOf(storage);let ready=false;
  function learn(question,answer,source="explicit-user-teaching"){
@@ -30,6 +32,8 @@ export function createNativeCognition({storage=null}={}){
   if(/^(hola|holaa|buenas|buenos dias|buenas tardes|buenas noches|hey|que tal)\b/.test(q))return "¡Hola! Soy E.D. Mi núcleo cognitivo propio está activo. Puedo calcular, recuperar conocimientos locales y aprender datos que me enseñes. Sigo ampliando mis capacidades.";
   if(/^(quien eres|que eres|que es ed|que es e d)\??$/.test(q))return "Soy E.D., un asistente construido con un núcleo cognitivo propio. No utilizo Qwen, Gemini, ChatGPT, Claude ni APIs de IA. Mi versión actual combina reglas lógicas, cálculo verificable, memoria local y recuperación de conocimiento. Mi comprensión del lenguaje todavía es limitada.";
   if(/^(cuanto es|cuanto da|calcula|calcular|resuelve|resuelveme|haz la cuenta)\b/.test(q)||/\d\s*(?:\+|-|\*|\/|\^|por|mas|menos|dividido)\s*\d/.test(q)){try{const r=calculateNaturalExpression(query),v=Number.isInteger(r.value)?String(r.value):String(Number(r.value.toPrecision(12)));return tutor?"Vamos paso a paso.\n1. Operación: "+r.expression+"\n2. Aplicamos el orden de las operaciones.\n3. Resultado: "+v+".\n4. El motor matemático propio ha verificado el cálculo.":"El resultado es "+v+". (Calculado por el motor matemático propio de E.D.)"}catch{}}
+  const remembered=memoryDocs(system).map(x=>({...x,score:score(query,x.text)})).filter(x=>x.score>=.25).sort((a,b)=>b.score-a.score)[0];
+  if(remembered)return "Según mi memoria local ("+remembered.source+"), "+remembered.text+"\\n\\nEs un recuerdo guardado, no una comprobación independiente.";
   const d=docs(system).map(x=>({...x,score:score(query,x.text)})).sort((a,b)=>b.score-a.score)[0];
   if(d?.score>=.2){const ss=d.text.split(/(?<=[.!?])\s+/).filter(Boolean),sel=ss.filter(x=>score(query,x)>=.2).slice(0,3);return (tutor?"Vamos a estudiarlo.\n\n":"")+(sel.length?sel:ss.slice(0,2)).join(" ")+(d.source?"\n\nFuente local: "+d.source:"")}
   return "Todavía no tengo conocimientos suficientes para responder con fiabilidad a eso. No voy a inventarme una respuesta. Puedes enseñarme un dato con «Aprende que [concepto] significa [explicación]» o añadir material revisado a la biblioteca local de E.D.";
